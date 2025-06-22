@@ -141,6 +141,11 @@
                 "command": "rezLsp.showServerStatus",
                 "title": "Show Server Status",
                 "category": "Rez LSP"
+            },
+            {
+                "command": "rezLsp.test",
+                "title": "Test Extension",
+                "category": "Rez LSP"
             }
         ],
         "iconThemes": [
