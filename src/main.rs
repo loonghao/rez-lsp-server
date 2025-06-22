@@ -20,6 +20,10 @@ async fn main() {
     // stdout is reserved for LSP protocol communication
     tracing_subscriber::fmt()
         .with_writer(std::io::stderr)
+        .with_target(false) // Hide module paths
+        .with_thread_ids(false) // Hide thread IDs
+        .with_level(true) // Show log level
+        .compact() // Use compact format
         .init();
 
     let args: Vec<String> = env::args().collect();
