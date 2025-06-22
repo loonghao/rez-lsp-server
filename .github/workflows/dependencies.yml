@@ -168,7 +168,7 @@ jobs:
 
     - name: Install Node.js dependencies
       working-directory: vscode-extension
-      run: npm ci
+      run: npm install
 
     - name: Node.js Security Audit
       working-directory: vscode-extension
@@ -240,7 +240,7 @@ jobs:
     - name: Check Node.js licenses
       working-directory: vscode-extension
       run: |
-        npm ci
+        npm install
         echo "" >> ../license_report.md
         echo "## Node.js Dependencies Licenses" >> ../license_report.md
         echo "" >> ../license_report.md

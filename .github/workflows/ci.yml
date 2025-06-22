@@ -111,7 +111,7 @@ jobs:
 
     - name: Install extension dependencies
       working-directory: vscode-extension
-      run: npm ci
+      run: npm install
 
     - name: Lint extension
       working-directory: vscode-extension
