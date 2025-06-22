@@ -158,15 +158,15 @@ jobs:
     - name: Prepare artifact (Unix)
       if: matrix.os != 'windows-latest'
       run: |
-        cp target/${{ matrix.target }}/release/rez-lsp-server ${{ matrix.artifact_name }}
-        chmod +x ${{ matrix.artifact_name }}
-        tar -czf ${{ matrix.artifact_name }}.tar.gz ${{ matrix.artifact_name }}
+        cp target/${{ matrix.target }}/release/rez-lsp-server rez-lsp-server
+        chmod +x rez-lsp-server
+        tar -czf ${{ matrix.artifact_name }}.tar.gz rez-lsp-server
 
     - name: Prepare artifact (Windows)
       if: matrix.os == 'windows-latest'
       run: |
-        copy target\${{ matrix.target }}\release\rez-lsp-server.exe ${{ matrix.artifact_name }}
-        7z a ${{ matrix.artifact_name }}.zip ${{ matrix.artifact_name }}
+        copy target\${{ matrix.target }}\release\rez-lsp-server.exe rez-lsp-server.exe
+        7z a ${{ matrix.artifact_name }}.zip rez-lsp-server.exe
 
     - name: Upload binary artifact
       uses: actions/upload-artifact@v4
@@ -251,15 +251,15 @@ jobs:
           unzip server-artifacts/*.zip -d temp/
           echo "Contents of temp directory:"
           ls -la temp/
-          cp temp/${{ matrix.server-name }} vscode-extension/server/
+          cp temp/rez-lsp-server.exe vscode-extension/server/rez-lsp-server.exe
         else
           echo "📦 Extracting Unix binary from tar.gz..."
           tar -tzf server-artifacts/*.tar.gz
           tar -xzf server-artifacts/*.tar.gz -C temp/
           echo "Contents of temp directory:"
           ls -la temp/
-          cp temp/${{ matrix.server-name }} vscode-extension/server/
-          chmod +x vscode-extension/server/${{ matrix.server-name }}
+          cp temp/rez-lsp-server vscode-extension/server/rez-lsp-server
+          chmod +x vscode-extension/server/rez-lsp-server
         fi
 
         echo "✅ Final server directory contents:"
@@ -281,7 +281,11 @@ jobs:
     - name: Validate server binary
       run: |
         echo "🔍 Validating server binary before packaging..."
-        SERVER_PATH="vscode-extension/server/${{ matrix.server-name }}"
+        if [[ "${{ matrix.code-target }}" == "win32-x64" ]]; then
+          SERVER_PATH="vscode-extension/server/rez-lsp-server.exe"
+        else
+          SERVER_PATH="vscode-extension/server/rez-lsp-server"
+        fi
 
         if [[ ! -f "$SERVER_PATH" ]]; then
           echo "❌ Server binary not found at: $SERVER_PATH"
