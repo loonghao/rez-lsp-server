@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Rez LSP Server
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
@@ -253,3 +254,7 @@ This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENS
 - [Rez Documentation](https://rez.readthedocs.io/)
 - [Language Server Protocol Specification](https://microsoft.github.io/language-server-protocol/)
 - [Issue Tracker](https://github.com/loonghao/rez-lsp-server/issues)
+=======
+# rez-lsp-server
+A Language Server Protocol (LSP) implementation for Rez package manager, providing intelligent code completion, dependency resolution, and syntax validation for package.py files across all major IDEs.
+>>>>>>> c2e14eeef8accc17c63ce41f199c158ea714e7d6

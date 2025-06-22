@@ -49,8 +49,10 @@ pub mod config;
 pub mod core;
 pub mod discovery;
 pub mod parser;
+pub mod performance;
 pub mod resolver;
 pub mod server;
+pub mod validation;
 
 // Re-export commonly used types
 pub use core::{Error, Result};

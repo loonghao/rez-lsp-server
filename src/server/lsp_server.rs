@@ -10,6 +10,7 @@ use tracing::info;
 use crate::config::RezConfigProvider;
 use crate::core::{ConfigProvider, PackageDiscovery as PackageDiscoveryTrait};
 use crate::discovery::PackageDiscoveryImpl;
+use crate::server::DiagnosticsManager;
 
 /// The main Rez Language Server.
 pub struct RezLanguageServer {
@@ -21,16 +22,22 @@ pub struct RezLanguageServer {
     config_provider: Arc<tokio::sync::RwLock<RezConfigProvider>>,
     /// Package discovery service
     package_discovery: Arc<tokio::sync::RwLock<Option<PackageDiscoveryImpl>>>,
+    /// Diagnostics manager
+    diagnostics_manager: Arc<DiagnosticsManager>,
 }
 
 impl RezLanguageServer {
     /// Create a new Rez Language Server instance.
     pub fn new(client: Client) -> Self {
+        let diagnostics_manager =
+            Arc::new(DiagnosticsManager::new().expect("Failed to create diagnostics manager"));
+
         Self {
             client,
             document_map: tokio::sync::RwLock::new(HashMap::new()),
             config_provider: Arc::new(tokio::sync::RwLock::new(RezConfigProvider::new())),
             package_discovery: Arc::new(tokio::sync::RwLock::new(None)),
+            diagnostics_manager,
         }
     }
 
@@ -78,7 +85,10 @@ impl RezLanguageServer {
             self.client
                 .log_message(
                     MessageType::INFO,
-                    format!("Discovered {} package families ({} total packages)", families, total),
+                    format!(
+                        "Discovered {} package families ({} total packages)",
+                        families, total
+                    ),
                 )
                 .await;
         }
@@ -92,7 +102,22 @@ impl RezLanguageServer {
     /// Handle document changes.
     async fn on_change(&self, params: TextDocumentItem) {
         let mut document_map = self.document_map.write().await;
-        document_map.insert(params.uri, params.text);
+        document_map.insert(params.uri.clone(), params.text.clone());
+        drop(document_map); // Release the lock early
+
+        // Run diagnostics for package.py files
+        if params.uri.path().ends_with("package.py") {
+            if let Ok(diagnostics) = self
+                .diagnostics_manager
+                .validate_file(&params.uri, &params.text)
+                .await
+            {
+                // Publish diagnostics to the client
+                self.client
+                    .publish_diagnostics(params.uri, diagnostics, None)
+                    .await;
+            }
+        }
     }
 }
 
@@ -169,7 +194,22 @@ impl LanguageServer for RezLanguageServer {
 
         if let Some(change) = params.content_changes.pop() {
             let mut document_map = self.document_map.write().await;
-            document_map.insert(params.text_document.uri, change.text);
+            document_map.insert(params.text_document.uri.clone(), change.text.clone());
+            drop(document_map); // Release the lock early
+
+            // Run diagnostics for package.py files
+            if params.text_document.uri.path().ends_with("package.py") {
+                if let Ok(diagnostics) = self
+                    .diagnostics_manager
+                    .validate_file(&params.text_document.uri, &change.text)
+                    .await
+                {
+                    // Publish diagnostics to the client
+                    self.client
+                        .publish_diagnostics(params.text_document.uri, diagnostics, None)
+                        .await;
+                }
+            }
         }
     }
 
@@ -185,10 +225,7 @@ impl LanguageServer for RezLanguageServer {
     }
 
     async fn completion(&self, params: CompletionParams) -> Result<Option<CompletionResponse>> {
-        super::completion::handle_completion(
-            &params,
-            &self.package_discovery,
-        ).await
+        super::completion::handle_completion(&params, &self.package_discovery).await
     }
 
     async fn hover(&self, params: HoverParams) -> Result<Option<Hover>> {

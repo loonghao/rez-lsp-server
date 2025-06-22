@@ -220,3 +220,9 @@ impl From<LspError> for Error {
         Error::Lsp(err)
     }
 }
+
+impl From<regex::Error> for Error {
+    fn from(err: regex::Error) -> Self {
+        Error::Parser(ParserError::InvalidSyntax(err.to_string()))
+    }
+}
