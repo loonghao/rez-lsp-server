@@ -29,6 +29,7 @@ package-lock.json
 vscode-extension/out/
 vscode-extension/*.vsix
 vscode-extension/node_modules/
+vscode-extension/server/
 
 # Development and testing files (cleaned up for release)
 test_lsp_client.js

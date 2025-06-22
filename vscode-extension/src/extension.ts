@@ -233,8 +233,7 @@ export function activate(context: vscode.ExtensionContext) {
         }
     });
 
-    // Register core commands
-    context.subscriptions.push(testCommand, showServerStatusCommand);
+    // We'll register all commands together later to avoid timing issues
 
     // Create status bar item (positioned at the bottom left like rust-analyzer)
     statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
@@ -431,7 +430,10 @@ export function activate(context: vscode.ExtensionContext) {
 
     // Remove duplicate showServerStatusCommand - already defined above
 
+    // Register ALL commands together to avoid timing issues
     context.subscriptions.push(
+        testCommand,
+        showServerStatusCommand,
         restartCommand,
         stopCommand,
         reloadWorkspaceCommand,

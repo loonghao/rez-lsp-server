@@ -200,7 +200,7 @@ impl LanguageServer for RezLanguageServer {
             .uri
             .path()
             .split('/')
-            .last()
+            .next_back()
             .unwrap_or("unknown");
         info!("Opened: {}", filename);
         self.on_change(params.text_document).await;
@@ -213,7 +213,7 @@ impl LanguageServer for RezLanguageServer {
             .uri
             .path()
             .split('/')
-            .last()
+            .next_back()
             .unwrap_or("unknown");
         tracing::debug!("Document changed: {}", filename);
 
@@ -244,7 +244,7 @@ impl LanguageServer for RezLanguageServer {
             .uri
             .path()
             .split('/')
-            .last()
+            .next_back()
             .unwrap_or("unknown");
         info!("Saved: {}", filename);
     }
@@ -255,7 +255,7 @@ impl LanguageServer for RezLanguageServer {
             .uri
             .path()
             .split('/')
-            .last()
+            .next_back()
             .unwrap_or("unknown");
         tracing::debug!("Closed: {}", filename);
 

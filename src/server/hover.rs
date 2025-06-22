@@ -11,7 +11,7 @@ pub async fn handle_hover(params: &HoverParams) -> Result<Option<Hover>> {
     // Use debug level for frequent events like hover
     tracing::debug!(
         "Hover at {}:{}:{}",
-        uri.path().split('/').last().unwrap_or("unknown"),
+        uri.path().split('/').next_back().unwrap_or("unknown"),
         position.line + 1,
         position.character + 1
     );
