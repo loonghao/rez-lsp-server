@@ -53,7 +53,7 @@ jobs:
     - name: Check package.json validity
       working-directory: vscode-extension
       run: |
-        npm install -g vsce
+        npm install -g @vscode/vsce
         vsce package --out test-package.vsix
         echo "Extension package created successfully"
 
@@ -173,19 +173,19 @@ jobs:
     - name: Package extension
       working-directory: vscode-extension
       run: |
-        npm install -g vsce
-        
+        npm install -g @vscode/vsce
+
         # Get version from package.json
         VERSION=$(node -p "require('./package.json').version")
-        
+
         # Package with commit hash for development builds
         PACKAGE_NAME="rez-lsp-extension-dev-${VERSION}-${GITHUB_SHA:0:8}.vsix"
         vsce package --out "$PACKAGE_NAME"
-        
+
         echo "Extension packaged as: $PACKAGE_NAME"
 
     - name: Upload development package
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: vscode-extension-dev
         path: vscode-extension/rez-lsp-extension-dev-*.vsix
@@ -203,7 +203,7 @@ jobs:
       uses: actions/checkout@v4
 
     - name: Download extension package
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: vscode-extension-dev
         path: ./

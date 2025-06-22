@@ -159,7 +159,7 @@ jobs:
       uses: actions/checkout@v4
 
     - name: Rust Security Audit
-      uses: rustsec/audit-check@v1.4.1
+      uses: rustsec/audit-check@v2.0.0
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -255,7 +255,7 @@ jobs:
         echo '```' >> ../license_report.md
 
     - name: Upload license report
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: license-report
         path: license_report.md
@@ -270,6 +270,6 @@ jobs:
       uses: actions/checkout@v4
 
     - name: Submit dependency graph
-      uses: github/dependency-submission-action@v1
+      uses: github/dependency-submission-action@v2
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
