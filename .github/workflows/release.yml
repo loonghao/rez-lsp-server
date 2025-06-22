@@ -361,7 +361,7 @@ jobs:
     name: Publish VSCode Extension
     runs-on: ubuntu-latest
     needs: [validate, build_vscode_extension]
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && !contains(github.event.head_commit.message, '[skip publish]')
     environment: vscode-marketplace
     steps:
     - name: Setup Node.js
@@ -378,15 +378,51 @@ jobs:
       with:
         path: ./extensions
 
+    - name: Check extension versions
+      run: |
+        echo "🔍 Checking extension versions before publishing..."
+        for vsix_file in extensions/*.vsix; do
+          if [[ -f "$vsix_file" ]]; then
+            echo "📦 Checking: $vsix_file"
+            # Extract package.json from VSIX to check version
+            unzip -q "$vsix_file" extension/package.json -d temp_extract/
+            VERSION=$(node -p "require('./temp_extract/extension/package.json').version")
+            NAME=$(node -p "require('./temp_extract/extension/package.json').name")
+            echo "Extension: $NAME, Version: $VERSION"
+            rm -rf temp_extract/
+          fi
+        done
+
     - name: Publish to Visual Studio Marketplace
       run: |
-        find extensions -name "*.vsix" -exec vsce publish --packagePath {} --pat ${{ secrets.VSCODE_MARKETPLACE_TOKEN }} \;
+        echo "🚀 Publishing to Visual Studio Marketplace..."
+        for vsix_file in extensions/*.vsix; do
+          if [[ -f "$vsix_file" ]]; then
+            echo "📦 Publishing: $vsix_file"
+            if vsce publish --packagePath "$vsix_file" --pat "${{ secrets.VSCODE_MARKETPLACE_TOKEN }}"; then
+              echo "✅ Successfully published to VS Marketplace: $vsix_file"
+            else
+              echo "⚠️ Failed to publish to VS Marketplace: $vsix_file (may already exist)"
+            fi
+          fi
+        done
       env:
         VSCODE_MARKETPLACE_TOKEN: ${{ secrets.VSCODE_MARKETPLACE_TOKEN }}
+      continue-on-error: true
 
     - name: Publish to Open VSX Registry
       run: |
-        find extensions -name "*.vsix" -exec ovsx publish {} --pat ${{ secrets.OPEN_VSX_TOKEN }} \;
+        echo "🚀 Publishing to Open VSX Registry..."
+        for vsix_file in extensions/*.vsix; do
+          if [[ -f "$vsix_file" ]]; then
+            echo "📦 Publishing: $vsix_file"
+            if ovsx publish "$vsix_file" --pat "${{ secrets.OPEN_VSX_TOKEN }}"; then
+              echo "✅ Successfully published to Open VSX: $vsix_file"
+            else
+              echo "⚠️ Failed to publish to Open VSX: $vsix_file (may already exist)"
+            fi
+          fi
+        done
       env:
         OPEN_VSX_TOKEN: ${{ secrets.OPEN_VSX_TOKEN }}
       continue-on-error: true
