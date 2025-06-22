@@ -152,9 +152,12 @@ function findLspServer(context: vscode.ExtensionContext): string {
 }
 
 export function activate(context: vscode.ExtensionContext) {
+    console.log('🚀 Rez LSP Extension activating...');
+
     // Create output channel for logging
     outputChannel = vscode.window.createOutputChannel('Rez LSP');
     outputChannel.show(true);
+    outputChannel.appendLine('🎯 Rez LSP Extension activated successfully!');
 
     // Create status bar item (positioned at the bottom left like rust-analyzer)
     statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
@@ -347,6 +350,7 @@ export function activate(context: vscode.ExtensionContext) {
     });
 
     const showServerStatusCommand = vscode.commands.registerCommand('rezLsp.showServerStatus', async () => {
+        outputChannel.appendLine('📋 Show Server Status command executed');
         const items: vscode.QuickPickItem[] = [
             {
                 label: '$(play) Start Server',
@@ -414,6 +418,7 @@ export function activate(context: vscode.ExtensionContext) {
         }
     });
 
+    outputChannel.appendLine('📝 Registering commands...');
     context.subscriptions.push(
         restartCommand,
         stopCommand,
@@ -423,6 +428,7 @@ export function activate(context: vscode.ExtensionContext) {
         toggleDiagnosticsCommand,
         showServerStatusCommand
     );
+    outputChannel.appendLine('✅ All commands registered successfully');
 
     // Start the client with better error handling
     outputChannel.appendLine('🔄 Starting LSP client...');
