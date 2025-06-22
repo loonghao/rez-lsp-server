@@ -130,7 +130,7 @@
         "test": "echo \"No tests specified\" && exit 0"
     },
     "devDependencies": {
-        "@types/node": "16.x",
+        "@types/node": "22.x",
         "@types/vscode": "^1.74.0",
         "@typescript-eslint/eslint-plugin": "^8.0.0",
         "@typescript-eslint/parser": "^8.0.0",
