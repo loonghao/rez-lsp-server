@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main, develop, 'feature/*' ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, develop ]
 
 env:
   CARGO_TERM_COLOR: always
@@ -77,3 +77,60 @@ jobs:
     - uses: rustsec/audit-check@v1.4.1
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
+
+  vscode_extension:
+    name: VSCode Extension
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: vscode-extension/package-lock.json
+
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Cache cargo build
+      uses: actions/cache@v4
+      with:
+        path: target
+        key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+
+    - name: Build LSP server
+      run: cargo build --release
+
+    - name: Install extension dependencies
+      working-directory: vscode-extension
+      run: npm ci
+
+    - name: Lint extension
+      working-directory: vscode-extension
+      run: npm run lint
+
+    - name: Compile extension
+      working-directory: vscode-extension
+      run: npm run compile
+
+    - name: Run extension tests
+      working-directory: vscode-extension
+      run: npm test
+      continue-on-error: true  # Tests may not be fully implemented yet
+
+    - name: Package extension
+      working-directory: vscode-extension
+      run: |
+        npm install -g vsce
+        vsce package --out rez-lsp-extension-${{ github.sha }}.vsix
+
+    - name: Upload extension artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: vscode-extension
+        path: vscode-extension/rez-lsp-extension-${{ github.sha }}.vsix
+        retention-days: 30

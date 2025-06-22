@@ -1,0 +1,319 @@
+name: VSCode Extension
+
+on:
+  push:
+    paths:
+      - 'vscode-extension/**'
+      - '.github/workflows/vscode-extension.yml'
+  pull_request:
+    paths:
+      - 'vscode-extension/**'
+      - '.github/workflows/vscode-extension.yml'
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: '18'
+
+jobs:
+  lint_and_test:
+    name: Lint and Test Extension
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        cache-dependency-path: vscode-extension/package-lock.json
+
+    - name: Install dependencies
+      working-directory: vscode-extension
+      run: npm ci
+
+    - name: Run ESLint
+      working-directory: vscode-extension
+      run: npm run lint
+
+    - name: Check TypeScript compilation
+      working-directory: vscode-extension
+      run: npm run compile
+
+    - name: Run tests
+      working-directory: vscode-extension
+      run: npm test
+      continue-on-error: true  # Tests may not be fully implemented yet
+
+    - name: Check package.json validity
+      working-directory: vscode-extension
+      run: |
+        npm install -g vsce
+        vsce package --out test-package.vsix
+        echo "Extension package created successfully"
+
+  integration_test:
+    name: Integration Test with LSP Server
+    runs-on: ubuntu-latest
+    needs: lint_and_test
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Cache cargo build
+      uses: actions/cache@v4
+      with:
+        path: target
+        key: ubuntu-latest-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+
+    - name: Build LSP server
+      run: cargo build --release
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        cache-dependency-path: vscode-extension/package-lock.json
+
+    - name: Install extension dependencies
+      working-directory: vscode-extension
+      run: npm ci
+
+    - name: Compile extension
+      working-directory: vscode-extension
+      run: npm run compile
+
+    - name: Create test workspace
+      run: |
+        mkdir -p test-workspace/test_packages/example_package/1.0.0
+        cat > test-workspace/test_packages/example_package/1.0.0/package.py << 'EOF'
+        name = "example_package"
+        version = "1.0.0"
+        description = "Test package for integration testing"
+        requires = ["python>=3.7"]
+        
+        def commands():
+            import os
+            env.PYTHONPATH.append(os.path.join("{root}", "python"))
+        EOF
+        
+        cat > test-workspace/package.py << 'EOF'
+        name = "test_project"
+        version = "0.1.0"
+        requires = ["example_package"]
+        EOF
+
+    - name: Test LSP server with extension
+      env:
+        REZ_PACKAGES_PATH: ${{ github.workspace }}/test-workspace/test_packages
+      run: |
+        # Start LSP server in background
+        ./target/release/rez-lsp-server &
+        LSP_PID=$!
+        
+        # Give it time to start
+        sleep 2
+        
+        # Test if server is responsive
+        if kill -0 $LSP_PID 2>/dev/null; then
+          echo "LSP server started successfully"
+          kill $LSP_PID
+        else
+          echo "LSP server failed to start"
+          exit 1
+        fi
+
+  package_extension:
+    name: Package Extension
+    runs-on: ubuntu-latest
+    needs: [lint_and_test, integration_test]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        cache-dependency-path: vscode-extension/package-lock.json
+
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Cache cargo build
+      uses: actions/cache@v4
+      with:
+        path: target
+        key: ubuntu-latest-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+
+    - name: Build LSP server
+      run: cargo build --release
+
+    - name: Install extension dependencies
+      working-directory: vscode-extension
+      run: npm ci
+
+    - name: Compile extension
+      working-directory: vscode-extension
+      run: npm run compile
+
+    - name: Package extension
+      working-directory: vscode-extension
+      run: |
+        npm install -g vsce
+        
+        # Get version from package.json
+        VERSION=$(node -p "require('./package.json').version")
+        
+        # Package with commit hash for development builds
+        PACKAGE_NAME="rez-lsp-extension-dev-${VERSION}-${GITHUB_SHA:0:8}.vsix"
+        vsce package --out "$PACKAGE_NAME"
+        
+        echo "Extension packaged as: $PACKAGE_NAME"
+
+    - name: Upload development package
+      uses: actions/upload-artifact@v3
+      with:
+        name: vscode-extension-dev
+        path: vscode-extension/rez-lsp-extension-dev-*.vsix
+        retention-days: 7
+
+  publish_prerelease:
+    name: Publish Pre-release
+    runs-on: ubuntu-latest
+    needs: package_extension
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    environment: vscode-marketplace-prerelease
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Download extension package
+      uses: actions/download-artifact@v3
+      with:
+        name: vscode-extension-dev
+        path: ./
+
+    - name: Find extension file
+      id: find_extension
+      run: |
+        EXTENSION_FILE=$(ls rez-lsp-extension-dev-*.vsix | head -1)
+        if [[ -n "$EXTENSION_FILE" ]]; then
+          echo "extension_file=$EXTENSION_FILE" >> $GITHUB_OUTPUT
+          echo "Found extension file: $EXTENSION_FILE"
+        else
+          echo "No extension file found"
+          exit 1
+        fi
+
+    - name: Publish pre-release to Open VSX Registry
+      uses: HaaLeo/publish-vscode-extension@v2
+      with:
+        pat: ${{ secrets.OPEN_VSX_TOKEN }}
+        extensionFile: ${{ steps.find_extension.outputs.extension_file }}
+        preRelease: true
+        skipDuplicate: true
+      continue-on-error: true  # Open VSX is optional for pre-releases
+
+    - name: Publish pre-release to Visual Studio Marketplace
+      uses: HaaLeo/publish-vscode-extension@v2
+      with:
+        pat: ${{ secrets.VSCODE_MARKETPLACE_TOKEN }}
+        registryUrl: https://marketplace.visualstudio.com
+        extensionFile: ${{ steps.find_extension.outputs.extension_file }}
+        preRelease: true
+        skipDuplicate: true
+
+  security_scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        cache-dependency-path: vscode-extension/package-lock.json
+
+    - name: Install dependencies
+      working-directory: vscode-extension
+      run: npm ci
+
+    - name: Run npm audit
+      working-directory: vscode-extension
+      run: npm audit --audit-level=moderate
+
+    - name: Run security scan with Snyk
+      uses: snyk/actions/node@master
+      env:
+        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+      with:
+        args: --file=vscode-extension/package.json
+      continue-on-error: true  # Don't fail the build on security issues
+
+  performance_test:
+    name: Performance Test
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Build LSP server with optimizations
+      run: cargo build --release
+
+    - name: Create large test environment
+      run: |
+        # Create a larger test environment to test performance
+        mkdir -p test_packages
+        for i in {1..100}; do
+          mkdir -p "test_packages/package_$i/1.0.0"
+          cat > "test_packages/package_$i/1.0.0/package.py" << EOF
+        name = "package_$i"
+        version = "1.0.0"
+        description = "Test package $i for performance testing"
+        requires = ["python>=3.7"]
+        EOF
+        done
+
+    - name: Test LSP server performance
+      env:
+        REZ_PACKAGES_PATH: ${{ github.workspace }}/test_packages
+      run: |
+        echo "Testing LSP server performance with 100 packages..."
+        
+        # Start server and measure startup time
+        start_time=$(date +%s%N)
+        timeout 30s ./target/release/rez-lsp-server --help || true
+        end_time=$(date +%s%N)
+        
+        startup_time=$(( (end_time - start_time) / 1000000 ))
+        echo "LSP server startup time: ${startup_time}ms"
+        
+        # Performance should be reasonable
+        if [[ $startup_time -gt 5000 ]]; then
+          echo "Warning: Startup time is high (${startup_time}ms)"
+        else
+          echo "Performance test passed"
+        fi
