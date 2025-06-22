@@ -113,25 +113,23 @@ jobs:
         requires = ["example_package"]
         EOF
 
-    - name: Test LSP server with extension
+    - name: Test LSP server functionality
       env:
         REZ_PACKAGES_PATH: ${{ github.workspace }}/test-workspace/test_packages
       run: |
-        # Start LSP server in background
-        ./target/release/rez-lsp-server &
-        LSP_PID=$!
-        
-        # Give it time to start
-        sleep 2
-        
-        # Test if server is responsive
-        if kill -0 $LSP_PID 2>/dev/null; then
-          echo "LSP server started successfully"
-          kill $LSP_PID
-        else
-          echo "LSP server failed to start"
-          exit 1
-        fi
+        # Test help command
+        echo "Testing LSP server help command..."
+        ./target/release/rez-lsp-server --help
+
+        # Test version command
+        echo "Testing LSP server version command..."
+        ./target/release/rez-lsp-server --version
+
+        # Test LSP protocol communication
+        echo "Testing LSP protocol communication..."
+        node scripts/test-lsp-protocol.js ./target/release/rez-lsp-server
+
+        echo "All LSP server tests passed!"
 
   package_extension:
     name: Package Extension
@@ -303,17 +301,31 @@ jobs:
       run: |
         echo "Testing LSP server performance with 100 packages..."
         
-        # Start server and measure startup time
+        # Test help command performance
         start_time=$(date +%s%N)
-        timeout 30s ./target/release/rez-lsp-server --help || true
+        ./target/release/rez-lsp-server --help > /dev/null
         end_time=$(date +%s%N)
-        
+
         startup_time=$(( (end_time - start_time) / 1000000 ))
-        echo "LSP server startup time: ${startup_time}ms"
-        
+        echo "LSP server help command time: ${startup_time}ms"
+
+        # Test version command performance
+        start_time=$(date +%s%N)
+        ./target/release/rez-lsp-server --version > /dev/null
+        end_time=$(date +%s%N)
+
+        version_time=$(( (end_time - start_time) / 1000000 ))
+        echo "LSP server version command time: ${version_time}ms"
+
         # Performance should be reasonable
         if [[ $startup_time -gt 5000 ]]; then
-          echo "Warning: Startup time is high (${startup_time}ms)"
+          echo "Warning: Help command time is high (${startup_time}ms)"
         else
-          echo "Performance test passed"
+          echo "Help command performance is acceptable (${startup_time}ms)"
+        fi
+
+        if [[ $version_time -gt 5000 ]]; then
+          echo "Warning: Version command time is high (${version_time}ms)"
+        else
+          echo "Version command performance is acceptable (${version_time}ms)"
         fi

@@ -65,8 +65,14 @@ jobs:
       run: |
         # Set up test environment
         export REZ_PACKAGES_PATH="${{ github.workspace }}/test_packages"
-        # Build and test basic functionality
-        timeout 10s ./target/release/rez-lsp-server || true
+
+        # Test help command
+        ./target/release/rez-lsp-server --help
+
+        # Test version command
+        ./target/release/rez-lsp-server --version
+
+        echo "LSP server basic functionality tests passed"
       if: runner.os != 'Windows'
 
   security_audit:

@@ -5,7 +5,7 @@ changelog_update = true
 git_release_enable = false
 # Enable automatic tag creation for all packages
 git_tag_enable = true
-# Only process the main vx package for releases by default
+# Only process the main rez-lsp-server package for releases by default
 release = false
 
 # Changelog configuration
@@ -22,7 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 # Package-specific configuration - only for the main vx CLI
 [[package]]
-name = "vx"
+name = "rez-lsp-server"
 # Main CLI package is in the root directory (no path needed)
 changelog_update = true
 # Enable GitHub releases only for the main package
@@ -31,8 +31,3 @@ git_release_enable = true
 release = true
 # Standard tag format for main CLI (triggers tag-release-assets.yml workflow)
 git_tag_name = "v{{version}}"
-
-# All other packages inherit workspace settings:
-# - release = false (not processed by release-plz)
-# - git_release_enable = false (no GitHub releases)
-# - They will still be published to crates.io when the main package is released
