@@ -3,6 +3,7 @@
     "displayName": "Rez LSP Extension",
     "description": "Language support for Rez package.py files with intelligent code completion and dependency resolution",
     "version": "0.1.0",
+    "type": "module",
     "publisher": "rez-lsp",
     "license": "Apache-2.0",
     "repository": {
@@ -107,6 +108,8 @@
         "vscode:prepublish": "npm run compile",
         "compile": "tsc -p ./",
         "watch": "tsc -watch -p ./",
+        "lint": "eslint src --ext ts",
+        "lint:fix": "eslint src --ext ts --fix",
         "package": "vsce package",
         "publish": "vsce publish",
         "test": "echo \"No tests specified\" && exit 0"
