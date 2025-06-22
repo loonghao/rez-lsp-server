@@ -153,12 +153,12 @@
     },
     "scripts": {
         "vscode:prepublish": "npm run build",
-        "build": "npm run webpack && npm run copy-server",
+        "build": "npm run vite:build && npm run copy-server",
         "compile": "tsc -p ./",
-        "webpack": "webpack --mode production",
-        "webpack:dev": "webpack --mode development",
+        "vite:build": "vite build",
+        "vite:dev": "vite build --mode development",
         "copy-server": "node scripts/copy-server.js",
-        "watch": "webpack --mode development --watch",
+        "watch": "vite build --watch",
         "lint": "npx eslint src --ext ts",
         "lint:fix": "npx eslint src --ext ts --fix",
         "package": "vsce package",
@@ -175,9 +175,7 @@
         "canvas": "^3.1.1",
         "eslint": "^9.29.0",
         "typescript": "^5.0.0",
-        "webpack": "^5.89.0",
-        "webpack-cli": "^5.1.4",
-        "ts-loader": "^9.5.1"
+        "vite": "^5.0.0"
     },
     "dependencies": {
         "vscode-languageclient": "^8.1.0"

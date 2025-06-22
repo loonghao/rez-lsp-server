@@ -40,7 +40,7 @@ package-lock.json
 *.ts.map
 *.js.map
 tsconfig.json
-webpack.config.js
+vite.config.ts
 .eslintrc.*
 eslint.config.*
 
