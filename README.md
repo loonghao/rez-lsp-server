@@ -14,11 +14,22 @@ A Language Server Protocol (LSP) implementation for [Rez package manager](https:
 
 ## ✨ Features
 
+### 🎯 Core LSP Features
 - 🔍 **Smart Package Completion**: Intelligent package name and version completion
-- 🔗 **Dependency Resolution**: Real-time dependency resolution and conflict detection  
-- 📝 **Syntax Validation**: Syntax highlighting and validation for package.py files
+- 🔗 **Dependency Resolution**: Real-time dependency resolution and conflict detection
+- 📝 **Syntax Validation**: Advanced Python and Rez-specific validation
+- 🎯 **Go to Definition**: Navigate to package definitions with Ctrl+Click
+- 🔍 **Find References**: Find all references to packages across your workspace
+- 📋 **Document Symbols**: Outline view of package.py structure
+- 🌍 **Workspace Symbols**: Search for packages across your entire workspace
+- 💡 **Hover Information**: Rich tooltips with package details
+
+### 🔧 Advanced Features
+- ⚡ **Performance Monitoring**: Built-in metrics collection and profiling
+- 🗄️ **Multi-level Caching**: Intelligent caching with TTL support
+- 🔄 **Incremental Updates**: Efficient handling of file changes
+- 🛡️ **Smart Suggestions**: Automatic fix suggestions for common issues
 - 🌐 **Cross-IDE Support**: Works with VSCode, PyCharm, Vim, Neovim, and more
-- ⚡ **Fast Discovery**: Efficient local package discovery via `REZ_PACKAGES_PATH`
 - 🛠️ **High Performance**: Built with Rust for speed and reliability
 
 ## 🚀 Quick Start
@@ -254,7 +265,3 @@ This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENS
 - [Rez Documentation](https://rez.readthedocs.io/)
 - [Language Server Protocol Specification](https://microsoft.github.io/language-server-protocol/)
 - [Issue Tracker](https://github.com/loonghao/rez-lsp-server/issues)
-=======
-# rez-lsp-server
-A Language Server Protocol (LSP) implementation for Rez package manager, providing intelligent code completion, dependency resolution, and syntax validation for package.py files across all major IDEs.
->>>>>>> c2e14eeef8accc17c63ce41f199c158ea714e7d6

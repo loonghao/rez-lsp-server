@@ -10,7 +10,7 @@ use tracing::info;
 use crate::config::RezConfigProvider;
 use crate::core::{ConfigProvider, PackageDiscovery as PackageDiscoveryTrait};
 use crate::discovery::PackageDiscoveryImpl;
-use crate::server::DiagnosticsManager;
+use crate::server::{navigation::NavigationHandler, DiagnosticsManager};
 
 /// The main Rez Language Server.
 pub struct RezLanguageServer {
@@ -24,6 +24,8 @@ pub struct RezLanguageServer {
     package_discovery: Arc<tokio::sync::RwLock<Option<PackageDiscoveryImpl>>>,
     /// Diagnostics manager
     diagnostics_manager: Arc<DiagnosticsManager>,
+    /// Navigation handler
+    navigation_handler: Arc<NavigationHandler>,
 }
 
 impl RezLanguageServer {
@@ -32,12 +34,16 @@ impl RezLanguageServer {
         let diagnostics_manager =
             Arc::new(DiagnosticsManager::new().expect("Failed to create diagnostics manager"));
 
+        let package_discovery = Arc::new(tokio::sync::RwLock::new(None));
+        let navigation_handler = Arc::new(NavigationHandler::new(package_discovery.clone()));
+
         Self {
             client,
             document_map: tokio::sync::RwLock::new(HashMap::new()),
             config_provider: Arc::new(tokio::sync::RwLock::new(RezConfigProvider::new())),
-            package_discovery: Arc::new(tokio::sync::RwLock::new(None)),
+            package_discovery,
             diagnostics_manager,
+            navigation_handler,
         }
     }
 
@@ -156,6 +162,10 @@ impl LanguageServer for RezLanguageServer {
                         work_done_progress_options: Default::default(),
                     },
                 )),
+                definition_provider: Some(OneOf::Left(true)),
+                references_provider: Some(OneOf::Left(true)),
+                document_symbol_provider: Some(OneOf::Left(true)),
+                workspace_symbol_provider: Some(OneOf::Left(true)),
                 ..ServerCapabilities::default()
             },
         })
@@ -230,6 +240,88 @@ impl LanguageServer for RezLanguageServer {
 
     async fn hover(&self, params: HoverParams) -> Result<Option<Hover>> {
         super::hover::handle_hover(&params).await
+    }
+
+    async fn goto_definition(
+        &self,
+        params: GotoDefinitionParams,
+    ) -> Result<Option<GotoDefinitionResponse>> {
+        match self
+            .navigation_handler
+            .handle_goto_definition(&params)
+            .await
+        {
+            Ok(response) => Ok(response),
+            Err(e) => {
+                self.client
+                    .log_message(
+                        MessageType::ERROR,
+                        format!("Go to definition failed: {}", e),
+                    )
+                    .await;
+                Ok(None)
+            }
+        }
+    }
+
+    async fn references(&self, params: ReferenceParams) -> Result<Option<Vec<Location>>> {
+        match self
+            .navigation_handler
+            .handle_find_references(&params)
+            .await
+        {
+            Ok(response) => Ok(response),
+            Err(e) => {
+                self.client
+                    .log_message(MessageType::ERROR, format!("Find references failed: {}", e))
+                    .await;
+                Ok(None)
+            }
+        }
+    }
+
+    async fn document_symbol(
+        &self,
+        params: DocumentSymbolParams,
+    ) -> Result<Option<DocumentSymbolResponse>> {
+        match self
+            .navigation_handler
+            .handle_document_symbols(&params)
+            .await
+        {
+            Ok(response) => Ok(response),
+            Err(e) => {
+                self.client
+                    .log_message(
+                        MessageType::ERROR,
+                        format!("Document symbols failed: {}", e),
+                    )
+                    .await;
+                Ok(None)
+            }
+        }
+    }
+
+    async fn symbol(
+        &self,
+        params: WorkspaceSymbolParams,
+    ) -> Result<Option<Vec<SymbolInformation>>> {
+        match self
+            .navigation_handler
+            .handle_workspace_symbols(&params)
+            .await
+        {
+            Ok(response) => Ok(response),
+            Err(e) => {
+                self.client
+                    .log_message(
+                        MessageType::ERROR,
+                        format!("Workspace symbols failed: {}", e),
+                    )
+                    .await;
+                Ok(None)
+            }
+        }
     }
 }
 

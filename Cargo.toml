@@ -3,11 +3,22 @@ name = "rez-lsp-server"
 version = "0.1.0"
 edition = "2021"
 authors = ["Hal <hal.long@outlook.com>"]
-description = "A Language Server Protocol implementation for Rez package manager"
+description = "A Language Server Protocol implementation for Rez package manager with intelligent code completion, validation, and navigation"
 license = "Apache-2.0"
 repository = "https://github.com/loonghao/rez-lsp-server"
+homepage = "https://github.com/loonghao/rez-lsp-server"
+documentation = "https://docs.rs/rez-lsp-server"
+readme = "README.md"
 keywords = ["rez", "lsp", "language-server", "vfx", "package-manager"]
 categories = ["development-tools", "text-editors"]
+exclude = [
+    "test_packages/*",
+    "vscode-extension/node_modules/*",
+    "vscode-extension/out/*",
+    "vscode-extension/*.vsix",
+    ".vscode/*",
+    "scripts/*",
+]
 build = "build.rs"
 
 [features]
