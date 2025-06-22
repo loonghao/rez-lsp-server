@@ -35,29 +35,54 @@ function updateStatusBarItem() {
         return;
     }
 
+    // Create rich tooltip like rust-analyzer
+    const tooltip = new vscode.MarkdownString('', true);
+    tooltip.isTrusted = true;
+
     switch (currentServerStatus) {
         case ServerStatus.Stopped:
-            statusBarItem.text = '$(circle-slash) Rez LSP: Stopped';
-            statusBarItem.color = '#ff6b6b';
-            statusBarItem.tooltip = 'Rez LSP Server is stopped. Click to start.';
+            statusBarItem.text = '$(stop-circle) rez-lsp';
+            statusBarItem.color = new vscode.ThemeColor('statusBarItem.warningForeground');
+            statusBarItem.backgroundColor = new vscode.ThemeColor('statusBarItem.warningBackground');
+            tooltip.appendText('Server is stopped');
+            tooltip.appendMarkdown('\n\n[Start server](command:rezLsp.restartServer)');
             break;
         case ServerStatus.Starting:
-            statusBarItem.text = '$(loading~spin) Rez LSP: Starting';
-            statusBarItem.color = '#ffa500';
-            statusBarItem.tooltip = 'Rez LSP Server is starting...';
+            statusBarItem.text = '$(loading~spin) rez-lsp';
+            statusBarItem.color = undefined;
+            statusBarItem.backgroundColor = undefined;
+            tooltip.appendText('Server is starting...');
             break;
         case ServerStatus.Running:
-            statusBarItem.text = '$(check) Rez LSP: Ready';
-            statusBarItem.color = '#4caf50';
-            statusBarItem.tooltip = 'Rez LSP Server is running. Click for options.';
+            statusBarItem.text = 'rez-lsp';
+            statusBarItem.color = undefined;
+            statusBarItem.backgroundColor = undefined;
+            tooltip.appendText('Server is running');
             break;
         case ServerStatus.Error:
-            statusBarItem.text = '$(error) Rez LSP: Error';
-            statusBarItem.color = '#f44336';
-            statusBarItem.tooltip = 'Rez LSP Server encountered an error. Click to restart.';
+            statusBarItem.text = '$(error) rez-lsp';
+            statusBarItem.color = new vscode.ThemeColor('statusBarItem.errorForeground');
+            statusBarItem.backgroundColor = new vscode.ThemeColor('statusBarItem.errorBackground');
+            tooltip.appendText('Server encountered an error');
+            tooltip.appendMarkdown('\n\n[Restart server](command:rezLsp.restartServer)');
             break;
     }
 
+    // Add common actions to tooltip (like rust-analyzer)
+    if (currentServerStatus !== ServerStatus.Stopped) {
+        const checkOnSave = config.get<boolean>('checkOnSave', true);
+        const toggleCheckText = checkOnSave ? 'Disable' : 'Enable';
+
+        tooltip.appendMarkdown('\n\n---\n\n');
+        tooltip.appendMarkdown('[$(terminal) Open Logs](command:rezLsp.showOutputChannel "Open the server logs")\n\n');
+        tooltip.appendMarkdown(`[$(settings) ${toggleCheckText} Check on Save](command:rezLsp.toggleDiagnostics "Temporarily ${toggleCheckText.toLowerCase()} check on save functionality")\n\n`);
+        tooltip.appendMarkdown('[$(refresh) Reload Workspace](command:rezLsp.reloadWorkspace "Reload and rediscover workspaces")\n\n');
+        tooltip.appendMarkdown('[$(symbol-property) Rebuild Build Dependencies](command:rezLsp.rebuildDependencies "Rebuild build scripts and dependencies")\n\n');
+        tooltip.appendMarkdown('[$(stop-circle) Stop server](command:rezLsp.stopServer "Stop the server")\n\n');
+        tooltip.appendMarkdown('[$(debug-restart) Restart server](command:rezLsp.restartServer "Restart the server")');
+    }
+
+    statusBarItem.tooltip = tooltip;
     statusBarItem.show();
 }
 
@@ -131,8 +156,8 @@ export function activate(context: vscode.ExtensionContext) {
     outputChannel = vscode.window.createOutputChannel('Rez LSP');
     outputChannel.show(true);
 
-    // Create status bar item (positioned at the bottom right like rust-analyzer)
-    statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
+    // Create status bar item (positioned at the bottom left like rust-analyzer)
+    statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
     statusBarItem.command = 'rezLsp.showServerStatus';
     context.subscriptions.push(statusBarItem);
 
