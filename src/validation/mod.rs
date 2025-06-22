@@ -127,7 +127,11 @@ pub struct ValidationStats {
 
 impl ValidationResult {
     /// Create a new validation result.
-    pub fn new(file_path: impl Into<String>, issues: Vec<ValidationIssue>, validation_time_ms: u64) -> Self {
+    pub fn new(
+        file_path: impl Into<String>,
+        issues: Vec<ValidationIssue>,
+        validation_time_ms: u64,
+    ) -> Self {
         let stats = ValidationStats::from_issues(&issues, validation_time_ms);
         Self {
             file_path: file_path.into(),
@@ -181,14 +185,7 @@ mod tests {
 
     #[test]
     fn test_validation_issue_creation() {
-        let issue = ValidationIssue::new(
-            Severity::Error,
-            10,
-            5,
-            8,
-            "Invalid syntax",
-            "E001",
-        );
+        let issue = ValidationIssue::new(Severity::Error, 10, 5, 8, "Invalid syntax", "E001");
 
         assert_eq!(issue.severity, Severity::Error);
         assert_eq!(issue.line, 10);
@@ -201,16 +198,13 @@ mod tests {
 
     #[test]
     fn test_validation_issue_with_suggestion() {
-        let issue = ValidationIssue::new(
-            Severity::Warning,
-            5,
-            10,
-            3,
-            "Deprecated field",
-            "W001",
-        ).with_suggestion("Use 'new_field' instead");
+        let issue = ValidationIssue::new(Severity::Warning, 5, 10, 3, "Deprecated field", "W001")
+            .with_suggestion("Use 'new_field' instead");
 
-        assert_eq!(issue.suggestion, Some("Use 'new_field' instead".to_string()));
+        assert_eq!(
+            issue.suggestion,
+            Some("Use 'new_field' instead".to_string())
+        );
     }
 
     #[test]

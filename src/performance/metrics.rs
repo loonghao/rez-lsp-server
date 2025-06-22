@@ -1,10 +1,10 @@
 //! Performance metrics collection and analysis.
 
+use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, VecDeque};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
-use serde::{Serialize, Deserialize};
 
 /// A single performance metric measurement.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -96,8 +96,14 @@ impl PerformanceMetrics {
 
         let p95_index = ((sorted_durations.len() as f64) * 0.95) as usize;
         let p99_index = ((sorted_durations.len() as f64) * 0.99) as usize;
-        let p95_duration_ms = sorted_durations.get(p95_index).copied().unwrap_or(max_duration_ms);
-        let p99_duration_ms = sorted_durations.get(p99_index).copied().unwrap_or(max_duration_ms);
+        let p95_duration_ms = sorted_durations
+            .get(p95_index)
+            .copied()
+            .unwrap_or(max_duration_ms);
+        let p99_duration_ms = sorted_durations
+            .get(p99_index)
+            .copied()
+            .unwrap_or(max_duration_ms);
 
         // Calculate ops per second based on average duration
         let ops_per_second = if avg_duration_ms > 0.0 {
@@ -143,10 +149,12 @@ impl MetricsCollector {
     /// Record a metric.
     pub async fn record(&self, metric: Metric) {
         let mut metrics = self.metrics.write().await;
-        let operation_metrics = metrics.entry(metric.name.clone()).or_insert_with(VecDeque::new);
-        
+        let operation_metrics = metrics
+            .entry(metric.name.clone())
+            .or_insert_with(VecDeque::new);
+
         operation_metrics.push_back(metric);
-        
+
         // Keep only the most recent metrics
         while operation_metrics.len() > self.max_metrics_per_operation {
             operation_metrics.pop_front();
@@ -186,13 +194,13 @@ impl MetricsCollector {
     pub async fn get_all_metrics(&self) -> HashMap<String, PerformanceMetrics> {
         let metrics = self.metrics.read().await;
         let mut result = HashMap::new();
-        
+
         for (operation, operation_metrics) in metrics.iter() {
             let durations: Vec<u64> = operation_metrics.iter().map(|m| m.duration_ms).collect();
             let perf_metrics = PerformanceMetrics::from_durations(operation, &durations);
             result.insert(operation.clone(), perf_metrics);
         }
-        
+
         result
     }
 
@@ -200,10 +208,14 @@ impl MetricsCollector {
     pub async fn get_slowest_operations(&self, limit: usize) -> Vec<PerformanceMetrics> {
         let all_metrics = self.get_all_metrics().await;
         let mut metrics_vec: Vec<PerformanceMetrics> = all_metrics.into_values().collect();
-        
-        metrics_vec.sort_by(|a, b| b.avg_duration_ms.partial_cmp(&a.avg_duration_ms).unwrap_or(std::cmp::Ordering::Equal));
+
+        metrics_vec.sort_by(|a, b| {
+            b.avg_duration_ms
+                .partial_cmp(&a.avg_duration_ms)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
         metrics_vec.truncate(limit);
-        
+
         metrics_vec
     }
 
@@ -211,24 +223,26 @@ impl MetricsCollector {
     pub async fn get_high_variance_operations(&self, limit: usize) -> Vec<(String, f64)> {
         let metrics = self.metrics.read().await;
         let mut variances = Vec::new();
-        
+
         for (operation, operation_metrics) in metrics.iter() {
             if operation_metrics.len() < 2 {
                 continue;
             }
-            
-            let durations: Vec<f64> = operation_metrics.iter().map(|m| m.duration_ms as f64).collect();
+
+            let durations: Vec<f64> = operation_metrics
+                .iter()
+                .map(|m| m.duration_ms as f64)
+                .collect();
             let mean = durations.iter().sum::<f64>() / durations.len() as f64;
-            let variance = durations.iter()
-                .map(|d| (d - mean).powi(2))
-                .sum::<f64>() / durations.len() as f64;
-            
+            let variance =
+                durations.iter().map(|d| (d - mean).powi(2)).sum::<f64>() / durations.len() as f64;
+
             variances.push((operation.clone(), variance));
         }
-        
+
         variances.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
         variances.truncate(limit);
-        
+
         variances
     }
 
@@ -253,7 +267,8 @@ impl MetricsCollector {
     pub async fn get_recent_metrics(&self, operation: &str, count: usize) -> Vec<Metric> {
         let metrics = self.metrics.read().await;
         if let Some(operation_metrics) = metrics.get(operation) {
-            operation_metrics.iter()
+            operation_metrics
+                .iter()
                 .rev()
                 .take(count)
                 .cloned()
@@ -268,19 +283,29 @@ impl MetricsCollector {
         let all_metrics = self.get_all_metrics().await;
         let total_operations = all_metrics.len();
         let total_measurements = self.total_metrics_count().await;
-        
+
         let avg_duration = if !all_metrics.is_empty() {
             all_metrics.values().map(|m| m.avg_duration_ms).sum::<f64>() / all_metrics.len() as f64
         } else {
             0.0
         };
-        
-        let slowest_operation = all_metrics.values()
-            .max_by(|a, b| a.avg_duration_ms.partial_cmp(&b.avg_duration_ms).unwrap_or(std::cmp::Ordering::Equal))
+
+        let slowest_operation = all_metrics
+            .values()
+            .max_by(|a, b| {
+                a.avg_duration_ms
+                    .partial_cmp(&b.avg_duration_ms)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            })
             .map(|m| m.operation.clone());
-        
-        let fastest_operation = all_metrics.values()
-            .min_by(|a, b| a.avg_duration_ms.partial_cmp(&b.avg_duration_ms).unwrap_or(std::cmp::Ordering::Equal))
+
+        let fastest_operation = all_metrics
+            .values()
+            .min_by(|a, b| {
+                a.avg_duration_ms
+                    .partial_cmp(&b.avg_duration_ms)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            })
             .map(|m| m.operation.clone());
 
         MetricsSummary {
@@ -329,7 +354,7 @@ mod tests {
         let metric = Metric::new("test_op", Duration::from_millis(100))
             .with_metadata("key1", "value1")
             .with_metadata("key2", "value2");
-        
+
         assert_eq!(metric.metadata.get("key1"), Some(&"value1".to_string()));
         assert_eq!(metric.metadata.get("key2"), Some(&"value2".to_string()));
     }
@@ -338,7 +363,7 @@ mod tests {
     fn test_performance_metrics_calculation() {
         let durations = vec![100, 200, 150, 300, 250];
         let metrics = PerformanceMetrics::from_durations("test_op", &durations);
-        
+
         assert_eq!(metrics.count, 5);
         assert_eq!(metrics.min_duration_ms, 100);
         assert_eq!(metrics.max_duration_ms, 300);
@@ -358,21 +383,27 @@ mod tests {
     #[tokio::test]
     async fn test_metrics_collector() {
         let collector = MetricsCollector::new(100);
-        
+
         // Record some metrics
-        collector.record_duration("operation1", Duration::from_millis(100)).await;
-        collector.record_duration("operation1", Duration::from_millis(200)).await;
-        collector.record_duration("operation2", Duration::from_millis(50)).await;
-        
+        collector
+            .record_duration("operation1", Duration::from_millis(100))
+            .await;
+        collector
+            .record_duration("operation1", Duration::from_millis(200))
+            .await;
+        collector
+            .record_duration("operation2", Duration::from_millis(50))
+            .await;
+
         // Get metrics for operation1
         let metrics = collector.get_metrics("operation1").await.unwrap();
         assert_eq!(metrics.count, 2);
         assert_eq!(metrics.avg_duration_ms, 150.0);
-        
+
         // Get all metrics
         let all_metrics = collector.get_all_metrics().await;
         assert_eq!(all_metrics.len(), 2);
-        
+
         // Get summary
         let summary = collector.get_summary().await;
         assert_eq!(summary.total_operations, 2);
@@ -382,12 +413,14 @@ mod tests {
     #[tokio::test]
     async fn test_metrics_collector_limit() {
         let collector = MetricsCollector::new(2);
-        
+
         // Record more metrics than the limit
         for i in 0..5 {
-            collector.record_duration("test_op", Duration::from_millis(i * 10)).await;
+            collector
+                .record_duration("test_op", Duration::from_millis(i * 10))
+                .await;
         }
-        
+
         let recent_metrics = collector.get_recent_metrics("test_op", 10).await;
         assert_eq!(recent_metrics.len(), 2); // Should be limited to 2
     }
@@ -395,11 +428,17 @@ mod tests {
     #[tokio::test]
     async fn test_slowest_operations() {
         let collector = MetricsCollector::new(100);
-        
-        collector.record_duration("fast_op", Duration::from_millis(10)).await;
-        collector.record_duration("slow_op", Duration::from_millis(1000)).await;
-        collector.record_duration("medium_op", Duration::from_millis(100)).await;
-        
+
+        collector
+            .record_duration("fast_op", Duration::from_millis(10))
+            .await;
+        collector
+            .record_duration("slow_op", Duration::from_millis(1000))
+            .await;
+        collector
+            .record_duration("medium_op", Duration::from_millis(100))
+            .await;
+
         let slowest = collector.get_slowest_operations(2).await;
         assert_eq!(slowest.len(), 2);
         assert_eq!(slowest[0].operation, "slow_op");
