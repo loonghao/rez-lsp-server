@@ -34,6 +34,15 @@ A Language Server Protocol (LSP) implementation for [Rez package manager](https:
 - 🌐 **Cross-IDE Support**: Works with VSCode, PyCharm, Vim, Neovim, and more
 - 🛠️ **High Performance**: Built with Rust for speed and reliability
 
+### 🎮 LSP Server Commands (VSCode)
+- 🔄 **Restart Server**: Restart the LSP server without reloading VSCode
+- 🛑 **Stop Server**: Stop the LSP server
+- 🔄 **Reload Workspace**: Reload workspace configuration and package cache
+- 📋 **Open Logs**: View detailed LSP server logs and diagnostics
+- 🔨 **Rebuild Dependencies**: Rebuild build dependencies and refresh cache
+- ⚙️ **Toggle Check on Save**: Enable/disable diagnostics when saving files
+- 📊 **Server Status**: Interactive status bar with quick access to all commands
+
 ## 🚀 Quick Start
 
 ### Prerequisites
@@ -131,7 +140,10 @@ For testing the latest development version:
    {
      "rezLsp.serverPath": "/path/to/rez-lsp-server/target/release/rez-lsp-server",
      "rezLsp.trace.server": "verbose",
-     "rezLsp.enableDiagnostics": true
+     "rezLsp.enableDiagnostics": true,
+     "rezLsp.showStatusBarItem": true,
+     "rezLsp.checkOnSave": true,
+     "rezLsp.packagePaths": []
    }
    ```
 
@@ -209,6 +221,8 @@ The server communicates via stdin/stdout using the LSP protocol.
    - Check the "Rez LSP" output channel for error messages
    - Verify the `rezLsp.serverPath` setting points to the correct executable
    - Ensure the LSP server binary has execute permissions
+   - Use `Rez LSP: Restart Server` command to restart the server
+   - Check the status bar for server status indicators
 
 2. **No Code Completion**:
    - Verify `REZ_PACKAGES_PATH` environment variable is set
@@ -237,7 +251,8 @@ The server communicates via stdin/stdout using the LSP protocol.
 3. **LSP Server Logs**:
    - Enable debug logging: `export REZ_LSP_DEBUG=true`
    - Check server output for detailed error messages
-   - Use `rezLsp.showOutputChannel` command to view logs
+   - Use `Rez LSP: Open Logs` command to view logs
+   - Click the status bar item for quick access to server commands
 
 ## 📝 Contributing
 

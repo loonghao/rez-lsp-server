@@ -93,19 +93,54 @@
                     "type": "boolean",
                     "default": true,
                     "description": "Enable diagnostic messages for package.py files"
+                },
+                "rezLsp.showStatusBarItem": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Show Rez LSP status in the status bar"
+                },
+                "rezLsp.checkOnSave": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Run diagnostics when saving files"
                 }
             }
         },
         "commands": [
             {
                 "command": "rezLsp.restartServer",
-                "title": "Restart Rez LSP Server",
-                "category": "Rez"
+                "title": "Restart Server",
+                "category": "Rez LSP"
+            },
+            {
+                "command": "rezLsp.stopServer",
+                "title": "Stop Server",
+                "category": "Rez LSP"
+            },
+            {
+                "command": "rezLsp.reloadWorkspace",
+                "title": "Reload Workspace",
+                "category": "Rez LSP"
             },
             {
                 "command": "rezLsp.showOutputChannel",
-                "title": "Show Output Channel",
-                "category": "Rez"
+                "title": "Open Logs",
+                "category": "Rez LSP"
+            },
+            {
+                "command": "rezLsp.rebuildDependencies",
+                "title": "Rebuild Build Dependencies",
+                "category": "Rez LSP"
+            },
+            {
+                "command": "rezLsp.toggleDiagnostics",
+                "title": "Toggle Check on Save",
+                "category": "Rez LSP"
+            },
+            {
+                "command": "rezLsp.showServerStatus",
+                "title": "Show Server Status",
+                "category": "Rez LSP"
             }
         ],
         "iconThemes": [
