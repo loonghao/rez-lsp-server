@@ -14,9 +14,12 @@ jobs:
   release-plz-release:
     name: Release-plz release
     runs-on: ubuntu-latest
-    if: ${{ github.repository_owner == 'loonghao' }}
+    if: ${{ github.repository_owner == 'loonghao' && !contains(github.event.head_commit.message, '[skip release]') }}
     permissions:
       contents: write
+    concurrency:
+      group: release-plz-release-${{ github.ref }}
+      cancel-in-progress: false
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -41,12 +44,12 @@ jobs:
   release-plz-pr:
     name: Release-plz PR
     runs-on: ubuntu-latest
-    if: ${{ github.repository_owner == 'loonghao' }}
+    if: ${{ github.repository_owner == 'loonghao' && !contains(github.event.head_commit.message, '[skip release]') }}
     permissions:
       contents: write
       pull-requests: write
     concurrency:
-      group: release-plz-${{ github.ref }}
+      group: release-plz-pr-${{ github.ref }}
       cancel-in-progress: false
     steps:
       - name: Checkout repository
