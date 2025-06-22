@@ -152,16 +152,96 @@ function findLspServer(context: vscode.ExtensionContext): string {
 }
 
 export function activate(context: vscode.ExtensionContext) {
-    console.log('🚀 Rez LSP Extension activating...');
-
     // Create output channel for logging
     outputChannel = vscode.window.createOutputChannel('Rez LSP');
     outputChannel.show(true);
     outputChannel.appendLine('🎯 Rez LSP Extension activated successfully!');
 
+    // Test command to verify extension is working
+    const testCommand = vscode.commands.registerCommand('rezLsp.test', () => {
+        vscode.window.showInformationMessage('Rez LSP Extension is working!');
+        outputChannel.appendLine('✅ Test command executed successfully');
+    });
+
+    // Enhanced showServerStatus command with full functionality
+    const showServerStatusCommand = vscode.commands.registerCommand('rezLsp.showServerStatus', async () => {
+        outputChannel.appendLine('📋 Show Server Status command executed');
+        const items: vscode.QuickPickItem[] = [
+            {
+                label: '$(play) Start Server',
+                description: 'Start the Rez LSP Server',
+                detail: currentServerStatus === ServerStatus.Running ? 'Server is already running' : undefined
+            },
+            {
+                label: '$(debug-restart) Restart Server',
+                description: 'Restart the Rez LSP Server'
+            },
+            {
+                label: '$(stop) Stop Server',
+                description: 'Stop the Rez LSP Server',
+                detail: currentServerStatus === ServerStatus.Stopped ? 'Server is already stopped' : undefined
+            },
+            {
+                label: '$(refresh) Reload Workspace',
+                description: 'Reload the current workspace'
+            },
+            {
+                label: '$(output) Open Logs',
+                description: 'Show the Rez LSP output channel'
+            },
+            {
+                label: '$(tools) Rebuild Dependencies',
+                description: 'Rebuild build dependencies'
+            },
+            {
+                label: '$(checklist) Toggle Check on Save',
+                description: 'Toggle diagnostic checks when saving files'
+            }
+        ];
+
+        const selected = await vscode.window.showQuickPick(items, {
+            placeHolder: `Rez LSP Server Status: ${currentServerStatus}`,
+            title: 'Rez LSP Server Actions'
+        });
+
+        if (selected) {
+            switch (selected.label) {
+                case '$(play) Start Server':
+                    if (currentServerStatus !== ServerStatus.Running) {
+                        await vscode.commands.executeCommand('rezLsp.restartServer');
+                    }
+                    break;
+                case '$(debug-restart) Restart Server':
+                    await vscode.commands.executeCommand('rezLsp.restartServer');
+                    break;
+                case '$(stop) Stop Server':
+                    await vscode.commands.executeCommand('rezLsp.stopServer');
+                    break;
+                case '$(refresh) Reload Workspace':
+                    await vscode.commands.executeCommand('rezLsp.reloadWorkspace');
+                    break;
+                case '$(output) Open Logs':
+                    await vscode.commands.executeCommand('rezLsp.showOutputChannel');
+                    break;
+                case '$(tools) Rebuild Dependencies':
+                    await vscode.commands.executeCommand('rezLsp.rebuildDependencies');
+                    break;
+                case '$(checklist) Toggle Check on Save':
+                    await vscode.commands.executeCommand('rezLsp.toggleDiagnostics');
+                    break;
+            }
+        }
+    });
+
+    // Register core commands
+    context.subscriptions.push(testCommand, showServerStatusCommand);
+
     // Create status bar item (positioned at the bottom left like rust-analyzer)
     statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
     statusBarItem.command = 'rezLsp.showServerStatus';
+    statusBarItem.text = '$(stop-circle) rez-lsp';
+    statusBarItem.tooltip = 'Click to show server status';
+    statusBarItem.show();
     context.subscriptions.push(statusBarItem);
 
     // Initialize server status
@@ -349,86 +429,16 @@ export function activate(context: vscode.ExtensionContext) {
         }
     });
 
-    const showServerStatusCommand = vscode.commands.registerCommand('rezLsp.showServerStatus', async () => {
-        outputChannel.appendLine('📋 Show Server Status command executed');
-        const items: vscode.QuickPickItem[] = [
-            {
-                label: '$(play) Start Server',
-                description: 'Start the Rez LSP Server',
-                detail: currentServerStatus === ServerStatus.Running ? 'Server is already running' : undefined
-            },
-            {
-                label: '$(debug-restart) Restart Server',
-                description: 'Restart the Rez LSP Server'
-            },
-            {
-                label: '$(stop) Stop Server',
-                description: 'Stop the Rez LSP Server',
-                detail: currentServerStatus === ServerStatus.Stopped ? 'Server is already stopped' : undefined
-            },
-            {
-                label: '$(refresh) Reload Workspace',
-                description: 'Reload the current workspace'
-            },
-            {
-                label: '$(output) Open Logs',
-                description: 'Show the Rez LSP output channel'
-            },
-            {
-                label: '$(tools) Rebuild Dependencies',
-                description: 'Rebuild build dependencies'
-            },
-            {
-                label: '$(checklist) Toggle Check on Save',
-                description: 'Toggle diagnostic checks when saving files'
-            }
-        ];
+    // Remove duplicate showServerStatusCommand - already defined above
 
-        const selected = await vscode.window.showQuickPick(items, {
-            placeHolder: `Rez LSP Server Status: ${currentServerStatus}`,
-            title: 'Rez LSP Server Actions'
-        });
-
-        if (selected) {
-            switch (selected.label) {
-                case '$(play) Start Server':
-                    if (currentServerStatus !== ServerStatus.Running) {
-                        await vscode.commands.executeCommand('rezLsp.restartServer');
-                    }
-                    break;
-                case '$(debug-restart) Restart Server':
-                    await vscode.commands.executeCommand('rezLsp.restartServer');
-                    break;
-                case '$(stop) Stop Server':
-                    await vscode.commands.executeCommand('rezLsp.stopServer');
-                    break;
-                case '$(refresh) Reload Workspace':
-                    await vscode.commands.executeCommand('rezLsp.reloadWorkspace');
-                    break;
-                case '$(output) Open Logs':
-                    await vscode.commands.executeCommand('rezLsp.showOutputChannel');
-                    break;
-                case '$(tools) Rebuild Dependencies':
-                    await vscode.commands.executeCommand('rezLsp.rebuildDependencies');
-                    break;
-                case '$(checklist) Toggle Check on Save':
-                    await vscode.commands.executeCommand('rezLsp.toggleDiagnostics');
-                    break;
-            }
-        }
-    });
-
-    outputChannel.appendLine('📝 Registering commands...');
     context.subscriptions.push(
         restartCommand,
         stopCommand,
         reloadWorkspaceCommand,
         showOutputCommand,
         rebuildDependenciesCommand,
-        toggleDiagnosticsCommand,
-        showServerStatusCommand
+        toggleDiagnosticsCommand
     );
-    outputChannel.appendLine('✅ All commands registered successfully');
 
     // Start the client with better error handling
     outputChannel.appendLine('🔄 Starting LSP client...');
