@@ -1,0 +1,45 @@
+{
+    "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+    "name": "Rez Package",
+    "scopeName": "source.python.rez",
+    "patterns": [
+        {
+            "include": "source.python"
+        },
+        {
+            "name": "variable.other.rez.package-field",
+            "match": "\\b(name|version|description|authors|requires|tools|variants|build_command|private_build_requires|build_requires|uuid|timestamp|format_version|relocatable|cachable|has_plugins|plugin_for)\\b"
+        },
+        {
+            "name": "support.function.rez.commands",
+            "match": "\\b(commands)\\b"
+        },
+        {
+            "name": "support.variable.rez.environment",
+            "match": "\\b(env)\\b"
+        },
+        {
+            "name": "support.function.rez.environment-methods",
+            "match": "\\b(append|prepend|set|unset)\\b"
+        },
+        {
+            "name": "string.quoted.double.rez.package-requirement",
+            "begin": "\"",
+            "end": "\"",
+            "patterns": [
+                {
+                    "name": "entity.name.tag.rez.package-name",
+                    "match": "[a-zA-Z_][a-zA-Z0-9_]*"
+                },
+                {
+                    "name": "keyword.operator.rez.version-constraint",
+                    "match": "[-+<>=~!]+"
+                },
+                {
+                    "name": "constant.numeric.rez.version",
+                    "match": "\\d+(\\.\\d+)*"
+                }
+            ]
+        }
+    ]
+}

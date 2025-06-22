@@ -1,0 +1,22 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug LSP Server",
+            "type": "lldb",
+            "request": "launch",
+            "program": "${workspaceFolder}/target/debug/rez-lsp-server",
+            "args": [],
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal",
+            "preLaunchTask": "cargo build"
+        },
+        {
+            "name": "Test LSP with stdio",
+            "type": "node",
+            "request": "launch",
+            "program": "${workspaceFolder}/test_lsp_client.js",
+            "console": "integratedTerminal"
+        }
+    ]
+}

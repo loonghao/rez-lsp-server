@@ -1,0 +1,123 @@
+{
+    "name": "rez-lsp-extension",
+    "displayName": "Rez LSP Extension",
+    "description": "Language support for Rez package.py files with intelligent code completion and dependency resolution",
+    "version": "0.1.0",
+    "publisher": "rez-lsp",
+    "license": "Apache-2.0",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/loonghao/rez-lsp-server.git"
+    },
+    "bugs": {
+        "url": "https://github.com/loonghao/rez-lsp-server/issues"
+    },
+    "engines": {
+        "vscode": "^1.74.0"
+    },
+    "categories": [
+        "Programming Languages",
+        "Linters",
+        "Other"
+    ],
+    "keywords": [
+        "rez",
+        "package-manager",
+        "vfx",
+        "pipeline",
+        "dependency-resolution"
+    ],
+    "activationEvents": [
+        "onLanguage:python",
+        "workspaceContains:**/package.py"
+    ],
+    "main": "./out/extension.js",
+    "contributes": {
+        "languages": [
+            {
+                "id": "rez-package",
+                "aliases": [
+                    "Rez Package",
+                    "rez"
+                ],
+                "extensions": [
+                    ".py"
+                ],
+                "filenames": [
+                    "package.py"
+                ],
+                "configuration": "./language-configuration.json"
+            }
+        ],
+        "grammars": [
+            {
+                "language": "rez-package",
+                "scopeName": "source.python.rez",
+                "path": "./syntaxes/rez-package.tmLanguage.json"
+            }
+        ],
+        "configuration": {
+            "type": "object",
+            "title": "Rez LSP Configuration",
+            "properties": {
+                "rezLsp.serverPath": {
+                    "type": "string",
+                    "default": "rez-lsp-server",
+                    "description": "Path to the Rez LSP server executable"
+                },
+                "rezLsp.trace.server": {
+                    "type": "string",
+                    "enum": [
+                        "off",
+                        "messages",
+                        "verbose"
+                    ],
+                    "default": "off",
+                    "description": "Traces the communication between VS Code and the language server"
+                },
+                "rezLsp.packagePaths": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "default": [],
+                    "description": "Additional package paths to search for Rez packages"
+                },
+                "rezLsp.enableDiagnostics": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Enable diagnostic messages for package.py files"
+                }
+            }
+        },
+        "commands": [
+            {
+                "command": "rezLsp.restartServer",
+                "title": "Restart Rez LSP Server",
+                "category": "Rez"
+            },
+            {
+                "command": "rezLsp.showOutputChannel",
+                "title": "Show Output Channel",
+                "category": "Rez"
+            }
+        ]
+    },
+    "scripts": {
+        "vscode:prepublish": "npm run compile",
+        "compile": "tsc -p ./",
+        "watch": "tsc -watch -p ./",
+        "package": "vsce package",
+        "publish": "vsce publish",
+        "test": "echo \"No tests specified\" && exit 0"
+    },
+    "devDependencies": {
+        "@types/vscode": "^1.74.0",
+        "@types/node": "16.x",
+        "typescript": "^4.9.4",
+        "vsce": "^2.15.0"
+    },
+    "dependencies": {
+        "vscode-languageclient": "^8.1.0"
+    }
+}
