@@ -206,8 +206,6 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: '22'
-        cache: 'npm'
-        cache-dependency-path: vscode-extension/package-lock.json
 
     - name: Set artifact name
       id: artifact_name
