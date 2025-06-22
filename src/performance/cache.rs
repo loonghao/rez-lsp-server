@@ -158,6 +158,7 @@ struct CacheManagerStats {
     hits: u64,
     misses: u64,
     puts: u64,
+    #[allow(dead_code)]
     evictions: u64,
 }
 

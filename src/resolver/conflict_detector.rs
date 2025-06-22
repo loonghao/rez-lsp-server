@@ -150,6 +150,7 @@ impl ConflictDetector {
     }
 
     /// Check if two constraints are mutually exclusive.
+    #[allow(dead_code)]
     fn are_constraints_mutually_exclusive(
         &self,
         constraint1: &VersionConstraint,

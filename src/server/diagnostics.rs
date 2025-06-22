@@ -78,13 +78,13 @@ impl DiagnosticsManager {
                 };
 
                 let start_pos = Position {
-                    line: (issue.line - 1).max(0) as u32, // Convert to 0-based
-                    character: (issue.column - 1).max(0) as u32, // Convert to 0-based
+                    line: issue.line - 1,        // Convert to 0-based
+                    character: issue.column - 1, // Convert to 0-based
                 };
 
                 let end_pos = Position {
-                    line: (issue.line - 1).max(0) as u32,
-                    character: (issue.column - 1 + issue.length).max(0) as u32,
+                    line: issue.line - 1,
+                    character: issue.column - 1 + issue.length,
                 };
 
                 let range = Range {

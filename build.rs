@@ -35,7 +35,7 @@ fn build_vscode_extension() {
 
     // Install dependencies
     let npm_install = Command::new("npm")
-        .args(&["install"])
+        .args(["install"])
         .current_dir(vscode_dir)
         .status();
 
@@ -55,7 +55,7 @@ fn build_vscode_extension() {
 
     // Compile TypeScript
     let npm_compile = Command::new("npm")
-        .args(&["run", "compile"])
+        .args(["run", "compile"])
         .current_dir(vscode_dir)
         .status();
 
