@@ -195,12 +195,27 @@ impl LanguageServer for RezLanguageServer {
     }
 
     async fn did_open(&self, params: DidOpenTextDocumentParams) {
-        info!("Document opened: {}", params.text_document.uri);
+        let filename = params
+            .text_document
+            .uri
+            .path()
+            .split('/')
+            .last()
+            .unwrap_or("unknown");
+        info!("Opened: {}", filename);
         self.on_change(params.text_document).await;
     }
 
     async fn did_change(&self, mut params: DidChangeTextDocumentParams) {
-        info!("Document changed: {}", params.text_document.uri);
+        // Use debug level for frequent document changes
+        let filename = params
+            .text_document
+            .uri
+            .path()
+            .split('/')
+            .last()
+            .unwrap_or("unknown");
+        tracing::debug!("Document changed: {}", filename);
 
         if let Some(change) = params.content_changes.pop() {
             let mut document_map = self.document_map.write().await;
@@ -224,11 +239,25 @@ impl LanguageServer for RezLanguageServer {
     }
 
     async fn did_save(&self, params: DidSaveTextDocumentParams) {
-        info!("Document saved: {}", params.text_document.uri);
+        let filename = params
+            .text_document
+            .uri
+            .path()
+            .split('/')
+            .last()
+            .unwrap_or("unknown");
+        info!("Saved: {}", filename);
     }
 
     async fn did_close(&self, params: DidCloseTextDocumentParams) {
-        info!("Document closed: {}", params.text_document.uri);
+        let filename = params
+            .text_document
+            .uri
+            .path()
+            .split('/')
+            .last()
+            .unwrap_or("unknown");
+        tracing::debug!("Closed: {}", filename);
 
         let mut document_map = self.document_map.write().await;
         document_map.remove(&params.text_document.uri);

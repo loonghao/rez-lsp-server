@@ -2,13 +2,18 @@
 
 use tower_lsp::jsonrpc::Result;
 use tower_lsp::lsp_types::*;
-use tracing::info;
 
 /// Handle hover requests.
 pub async fn handle_hover(params: &HoverParams) -> Result<Option<Hover>> {
-    info!(
-        "Hover requested at {:?}",
-        params.text_document_position_params
+    let uri = &params.text_document_position_params.text_document.uri;
+    let position = &params.text_document_position_params.position;
+
+    // Use debug level for frequent events like hover
+    tracing::debug!(
+        "Hover at {}:{}:{}",
+        uri.path().split('/').last().unwrap_or("unknown"),
+        position.line + 1,
+        position.character + 1
     );
 
     // MVP: Basic hover information
