@@ -209,23 +209,63 @@ jobs:
         cache: 'npm'
         cache-dependency-path: vscode-extension/package-lock.json
 
+    - name: Set artifact name
+      id: artifact_name
+      run: |
+        case "${{ matrix.code-target }}" in
+          "win32-x64")
+            echo "artifact_name=rez-lsp-server-windows-x64.exe" >> $GITHUB_OUTPUT
+            ;;
+          "linux-x64")
+            echo "artifact_name=rez-lsp-server-linux-x64" >> $GITHUB_OUTPUT
+            ;;
+          "darwin-x64")
+            echo "artifact_name=rez-lsp-server-macos-x64" >> $GITHUB_OUTPUT
+            ;;
+          "darwin-arm64")
+            echo "artifact_name=rez-lsp-server-macos-arm64" >> $GITHUB_OUTPUT
+            ;;
+          *)
+            echo "❌ Unknown code target: ${{ matrix.code-target }}"
+            exit 1
+            ;;
+        esac
+        echo "🎯 Using artifact: $(cat $GITHUB_OUTPUT | grep artifact_name | cut -d'=' -f2)"
+
     - name: Download server binary
       uses: actions/download-artifact@v4
       with:
-        name: rez-lsp-server-${{ matrix.code-target == 'win32-x64' && 'windows-x64' || matrix.code-target == 'linux-x64' && 'linux-x64' || matrix.code-target == 'darwin-x64' && 'macos-x64' || 'macos-arm64' }}
+        name: ${{ steps.artifact_name.outputs.artifact_name }}
         path: ./server-artifacts
 
     - name: Extract and prepare server binary
       run: |
-        mkdir -p vscode-extension/server
+        echo "🔍 Debugging artifact download for ${{ matrix.code-target }}"
+        echo "Expected server binary name: ${{ matrix.server-name }}"
+        echo "Server artifacts directory contents:"
+        ls -la ./server-artifacts/
+
+        mkdir -p vscode-extension/server temp
+
         if [[ "${{ matrix.code-target }}" == "win32-x64" ]]; then
+          echo "📦 Extracting Windows binary from ZIP..."
+          unzip -l server-artifacts/*.zip
           unzip server-artifacts/*.zip -d temp/
+          echo "Contents of temp directory:"
+          ls -la temp/
           cp temp/${{ matrix.server-name }} vscode-extension/server/
         else
+          echo "📦 Extracting Unix binary from tar.gz..."
+          tar -tzf server-artifacts/*.tar.gz
           tar -xzf server-artifacts/*.tar.gz -C temp/
+          echo "Contents of temp directory:"
+          ls -la temp/
           cp temp/${{ matrix.server-name }} vscode-extension/server/
           chmod +x vscode-extension/server/${{ matrix.server-name }}
         fi
+
+        echo "✅ Final server directory contents:"
+        ls -la vscode-extension/server/
 
     - name: Update extension version
       working-directory: vscode-extension
@@ -240,17 +280,72 @@ jobs:
       working-directory: vscode-extension
       run: npm run compile
 
+    - name: Validate server binary
+      run: |
+        echo "🔍 Validating server binary before packaging..."
+        SERVER_PATH="vscode-extension/server/${{ matrix.server-name }}"
+
+        if [[ ! -f "$SERVER_PATH" ]]; then
+          echo "❌ Server binary not found at: $SERVER_PATH"
+          echo "Available files in server directory:"
+          ls -la vscode-extension/server/ || echo "Server directory does not exist"
+          exit 1
+        fi
+
+        echo "✅ Server binary found: $SERVER_PATH"
+        echo "📊 Binary size: $(du -h "$SERVER_PATH" | cut -f1)"
+
+        # Test if binary is executable (Unix only)
+        if [[ "${{ matrix.code-target }}" != "win32-x64" ]]; then
+          if [[ ! -x "$SERVER_PATH" ]]; then
+            echo "❌ Server binary is not executable"
+            exit 1
+          fi
+          echo "✅ Server binary is executable"
+        fi
+
     - name: Package extension
       id: package
       working-directory: vscode-extension
       run: |
+        echo "📦 Installing vsce..."
         npm install -g @vscode/vsce
+
         EXTENSION_FILE="rez-lsp-extension-${{ matrix.code-target }}-${{ needs.validate.outputs.version }}.vsix"
+        echo "🎯 Target extension file: $EXTENSION_FILE"
+        echo "🏷️  Target platform: ${{ matrix.code-target }}"
+        echo "📋 Version: ${{ needs.validate.outputs.version }}"
+        echo "🔄 Pre-release: ${{ needs.validate.outputs.is_prerelease }}"
+
+        # Validate package.json before packaging
+        echo "🔍 Validating package.json..."
+        node -e "
+          const pkg = require('./package.json');
+          console.log('Package name:', pkg.name);
+          console.log('Package version:', pkg.version);
+          console.log('Package publisher:', pkg.publisher);
+          if (!pkg.name || !pkg.version || !pkg.publisher) {
+            console.error('❌ Missing required package.json fields');
+            process.exit(1);
+          }
+          console.log('✅ package.json validation passed');
+        "
+
+        echo "📦 Packaging extension..."
         if [[ "${{ needs.validate.outputs.is_prerelease }}" == "true" ]]; then
-          vsce package --target ${{ matrix.code-target }} --pre-release --out "$EXTENSION_FILE"
+          vsce package --target ${{ matrix.code-target }} --pre-release --out "$EXTENSION_FILE" --verbose
         else
-          vsce package --target ${{ matrix.code-target }} --out "$EXTENSION_FILE"
+          vsce package --target ${{ matrix.code-target }} --out "$EXTENSION_FILE" --verbose
         fi
+
+        # Validate the generated package
+        if [[ ! -f "$EXTENSION_FILE" ]]; then
+          echo "❌ Extension package was not created: $EXTENSION_FILE"
+          exit 1
+        fi
+
+        echo "✅ Extension packaged successfully: $EXTENSION_FILE"
+        echo "📊 Package size: $(du -h "$EXTENSION_FILE" | cut -f1)"
         echo "extension_path=vscode-extension/$EXTENSION_FILE" >> $GITHUB_OUTPUT
 
     - name: Upload extension artifact
