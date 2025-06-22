@@ -12,7 +12,7 @@ on:
   workflow_dispatch:
 
 env:
-  NODE_VERSION: '18'
+  NODE_VERSION: '22'
 
 jobs:
   lint_and_test:
@@ -30,6 +30,8 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        cache-dependency-path: vscode-extension/package.json
 
     - name: Install dependencies
       working-directory: vscode-extension
@@ -39,9 +41,9 @@ jobs:
       working-directory: vscode-extension
       run: npm run lint
 
-    - name: Check TypeScript compilation
+    - name: Build with Vite
       working-directory: vscode-extension
-      run: npm run compile
+      run: npm run vite:build
 
     - name: Run tests
       working-directory: vscode-extension
@@ -80,14 +82,16 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        cache-dependency-path: vscode-extension/package.json
 
     - name: Install extension dependencies
       working-directory: vscode-extension
       run: npm install
 
-    - name: Compile extension
+    - name: Build extension
       working-directory: vscode-extension
-      run: npm run compile
+      run: npm run vite:build
 
     - name: Create test workspace
       run: |
@@ -141,6 +145,8 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        cache-dependency-path: vscode-extension/package.json
 
     - name: Install Rust
       uses: dtolnay/rust-toolchain@stable
@@ -158,9 +164,9 @@ jobs:
       working-directory: vscode-extension
       run: npm install
 
-    - name: Compile extension
+    - name: Build extension
       working-directory: vscode-extension
-      run: npm run compile
+      run: npm run vite:build
 
     - name: Package extension
       working-directory: vscode-extension
@@ -240,6 +246,8 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        cache-dependency-path: vscode-extension/package.json
 
     - name: Install dependencies
       working-directory: vscode-extension
