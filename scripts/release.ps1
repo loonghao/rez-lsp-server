@@ -2,7 +2,7 @@
 # This script prepares and creates a release
 
 param(
-    [Parameter(Mandatory=$true)]
+    [Parameter(Mandatory = $true)]
     [string]$Version,
     
     [switch]$DryRun,
@@ -199,10 +199,12 @@ if (-not $DryRun) {
             $newChangelog += ""
             $newChangelog += "## [$Version] - $(Get-Date -Format 'yyyy-MM-dd')"
             $foundUnreleased = $true
-        } elseif ($line -match "^\[Unreleased\]:") {
+        }
+        elseif ($line -match "^\[Unreleased\]:") {
             $newChangelog += "[Unreleased]: https://github.com/loonghao/rez-lsp-server/compare/v$Version...HEAD"
             $newChangelog += "[$Version]: https://github.com/loonghao/rez-lsp-server/releases/tag/v$Version"
-        } else {
+        }
+        else {
             $newChangelog += $line
         }
     }
@@ -245,22 +247,40 @@ Write-Host "Next steps:" -ForegroundColor Yellow
 Write-Host "1. Review the changes:"
 Write-Host "   git show v$Version"
 Write-Host ""
-Write-Host "2. Push the release:"
+Write-Host "2. Push the release (this will trigger automatic publishing):"
 Write-Host "   git push origin main"
 Write-Host "   git push origin v$Version"
 Write-Host ""
-Write-Host "3. Create GitHub release:"
-Write-Host "   - Go to https://github.com/loonghao/rez-lsp-server/releases"
-Write-Host "   - Click 'Create a new release'"
-Write-Host "   - Select tag v$Version"
-Write-Host "   - Add release notes from CHANGELOG.md"
-Write-Host "   - Upload vscode-extension/rez-lsp-extension-$Version.vsix"
+Write-Host "3. Monitor the release process:"
+Write-Host "   - Go to https://github.com/loonghao/rez-lsp-server/actions"
+Write-Host "   - Watch the 'Release' workflow progress"
+Write-Host "   - The workflow will automatically:"
+Write-Host "     * Build binaries for all platforms"
+Write-Host "     * Package VSCode extension"
+Write-Host "     * Publish to VSCode Marketplace"
+Write-Host "     * Publish to Open VSX Registry"
+Write-Host "     * Create GitHub release with assets"
 Write-Host ""
-Write-Host "4. Publish to crates.io (optional):"
-Write-Host "   cargo publish"
+Write-Host "4. Verify publication:"
+Write-Host "   - VSCode Marketplace: https://marketplace.visualstudio.com/publishers/loonghao"
+Write-Host "   - Open VSX Registry: https://open-vsx.org/user/loonghao"
+Write-Host ""
+Write-Host "5. Optional manual steps:"
+Write-Host "   - Publish to crates.io: cargo publish"
+Write-Host "   - Update documentation if needed"
+Write-Host "   - Announce the release"
 Write-Host ""
 
 if ($DryRun) {
     Write-Warning "This was a dry run. No changes were made."
     Write-Info "Run without -DryRun to perform the actual release."
+    Write-Host ""
+    Write-Host "🤖 Automated CI/CD Pipeline:" -ForegroundColor Cyan
+    Write-Host "Once you push the tag, GitHub Actions will handle:"
+    Write-Host "- ✅ Cross-platform testing"
+    Write-Host "- ✅ Security audits"
+    Write-Host "- ✅ Binary compilation"
+    Write-Host "- ✅ Extension packaging"
+    Write-Host "- ✅ Marketplace publishing"
+    Write-Host "- ✅ Release creation"
 }

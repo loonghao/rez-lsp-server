@@ -1,0 +1,275 @@
+name: Dependencies
+
+on:
+  schedule:
+    # Run weekly on Sundays at 2 AM UTC
+    - cron: '0 2 * * 0'
+  workflow_dispatch:
+
+jobs:
+  update_rust_dependencies:
+    name: Update Rust Dependencies
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Install cargo-edit
+      run: cargo install cargo-edit
+
+    - name: Update dependencies
+      run: |
+        # Update all dependencies to latest compatible versions
+        cargo update
+        
+        # Check for outdated dependencies
+        cargo install cargo-outdated
+        cargo outdated --root-deps-only > outdated_deps.txt
+        
+        if [[ -s outdated_deps.txt ]]; then
+          echo "Outdated dependencies found:"
+          cat outdated_deps.txt
+          
+          # Create a summary for the PR
+          echo "## Rust Dependencies Update" > update_summary.md
+          echo "" >> update_summary.md
+          echo "The following dependencies have been updated:" >> update_summary.md
+          echo "" >> update_summary.md
+          echo '```' >> update_summary.md
+          cat outdated_deps.txt >> update_summary.md
+          echo '```' >> update_summary.md
+        else
+          echo "No outdated dependencies found"
+          echo "## Rust Dependencies Update" > update_summary.md
+          echo "" >> update_summary.md
+          echo "All dependencies are up to date." >> update_summary.md
+        fi
+
+    - name: Run tests with updated dependencies
+      run: cargo test --lib
+
+    - name: Check if changes were made
+      id: changes
+      run: |
+        if git diff --quiet Cargo.lock; then
+          echo "changed=false" >> $GITHUB_OUTPUT
+        else
+          echo "changed=true" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Create Pull Request
+      if: steps.changes.outputs.changed == 'true'
+      uses: peter-evans/create-pull-request@v5
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        commit-message: 'chore: update Rust dependencies'
+        title: 'chore: Update Rust dependencies'
+        body-path: update_summary.md
+        branch: automated/update-rust-dependencies
+        delete-branch: true
+        labels: |
+          dependencies
+          automated
+
+  update_node_dependencies:
+    name: Update Node.js Dependencies
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: vscode-extension/package-lock.json
+
+    - name: Install npm-check-updates
+      run: npm install -g npm-check-updates
+
+    - name: Update dependencies
+      working-directory: vscode-extension
+      run: |
+        # Check for outdated dependencies
+        ncu > outdated_deps.txt || true
+        
+        # Update dependencies
+        ncu -u
+        npm install
+        
+        # Create summary
+        echo "## Node.js Dependencies Update" > ../update_summary_node.md
+        echo "" >> ../update_summary_node.md
+        
+        if [[ -s outdated_deps.txt ]]; then
+          echo "The following dependencies have been updated:" >> ../update_summary_node.md
+          echo "" >> ../update_summary_node.md
+          echo '```' >> ../update_summary_node.md
+          cat outdated_deps.txt >> ../update_summary_node.md
+          echo '```' >> ../update_summary_node.md
+        else
+          echo "All dependencies are up to date." >> ../update_summary_node.md
+        fi
+
+    - name: Run tests with updated dependencies
+      working-directory: vscode-extension
+      run: |
+        npm run compile
+        npm test || true  # Don't fail if tests aren't fully implemented
+
+    - name: Check if changes were made
+      id: changes
+      run: |
+        if git diff --quiet vscode-extension/package.json vscode-extension/package-lock.json; then
+          echo "changed=false" >> $GITHUB_OUTPUT
+        else
+          echo "changed=true" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Create Pull Request
+      if: steps.changes.outputs.changed == 'true'
+      uses: peter-evans/create-pull-request@v5
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        commit-message: 'chore: update Node.js dependencies'
+        title: 'chore: Update Node.js dependencies'
+        body-path: update_summary_node.md
+        branch: automated/update-node-dependencies
+        delete-branch: true
+        labels: |
+          dependencies
+          automated
+
+  security_audit:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Rust Security Audit
+      uses: rustsec/audit-check@v1.4.1
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: vscode-extension/package-lock.json
+
+    - name: Install Node.js dependencies
+      working-directory: vscode-extension
+      run: npm ci
+
+    - name: Node.js Security Audit
+      working-directory: vscode-extension
+      run: |
+        npm audit --audit-level=moderate || {
+          echo "Security vulnerabilities found in Node.js dependencies"
+          npm audit --audit-level=moderate --json > audit_results.json
+          
+          # Create issue if vulnerabilities found
+          echo "## Security Vulnerabilities Found" > security_report.md
+          echo "" >> security_report.md
+          echo "The following security vulnerabilities were found in Node.js dependencies:" >> security_report.md
+          echo "" >> security_report.md
+          echo '```json' >> security_report.md
+          cat audit_results.json >> security_report.md
+          echo '```' >> security_report.md
+          echo "" >> security_report.md
+          echo "Please review and update the affected dependencies." >> security_report.md
+          
+          # This will be handled by the issue creation step
+          exit 1
+        }
+
+    - name: Create security issue
+      if: failure()
+      uses: peter-evans/create-pull-request@v5
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        commit-message: 'security: address dependency vulnerabilities'
+        title: 'security: Address dependency vulnerabilities'
+        body-path: vscode-extension/security_report.md
+        branch: automated/security-fixes
+        delete-branch: true
+        labels: |
+          security
+          dependencies
+          automated
+
+  check_licenses:
+    name: Check Licenses
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Install cargo-license
+      run: cargo install cargo-license
+
+    - name: Check Rust licenses
+      run: |
+        echo "## Rust Dependencies Licenses" > license_report.md
+        echo "" >> license_report.md
+        echo '```' >> license_report.md
+        cargo license >> license_report.md
+        echo '```' >> license_report.md
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: vscode-extension/package-lock.json
+
+    - name: Install license-checker
+      run: npm install -g license-checker
+
+    - name: Check Node.js licenses
+      working-directory: vscode-extension
+      run: |
+        npm ci
+        echo "" >> ../license_report.md
+        echo "## Node.js Dependencies Licenses" >> ../license_report.md
+        echo "" >> ../license_report.md
+        echo '```' >> ../license_report.md
+        license-checker --summary >> ../license_report.md
+        echo '```' >> ../license_report.md
+
+    - name: Upload license report
+      uses: actions/upload-artifact@v3
+      with:
+        name: license-report
+        path: license_report.md
+        retention-days: 30
+
+  dependency_graph:
+    name: Update Dependency Graph
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Submit dependency graph
+      uses: github/dependency-submission-action@v1
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}

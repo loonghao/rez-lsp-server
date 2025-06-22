@@ -1,9 +1,11 @@
-<<<<<<< HEAD
 # Rez LSP Server
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Rust](https://img.shields.io/badge/rust-1.75+-orange.svg)](https://www.rust-lang.org)
 [![LSP](https://img.shields.io/badge/LSP-3.17-green.svg)](https://microsoft.github.io/language-server-protocol/)
+[![CI](https://github.com/loonghao/rez-lsp-server/workflows/CI/badge.svg)](https://github.com/loonghao/rez-lsp-server/actions)
+[![Release](https://github.com/loonghao/rez-lsp-server/workflows/Release/badge.svg)](https://github.com/loonghao/rez-lsp-server/actions)
+[![VSCode Marketplace](https://img.shields.io/visual-studio-marketplace/v/loonghao.rez-lsp)](https://marketplace.visualstudio.com/items?itemName=loonghao.rez-lsp)
 [![Development Status](https://img.shields.io/badge/status-alpha-red.svg)](https://github.com/loonghao/rez-lsp-server)
 
 [中文文档](README_zh.md) | English
