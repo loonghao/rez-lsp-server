@@ -30,6 +30,7 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: ${{ env.NODE_VERSION }}
+        cache: ''
 
     - name: Install dependencies
       working-directory: vscode-extension
@@ -80,6 +81,7 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: ${{ env.NODE_VERSION }}
+        cache: ''
 
     - name: Install extension dependencies
       working-directory: vscode-extension
@@ -141,6 +143,7 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: ${{ env.NODE_VERSION }}
+        cache: ''
 
     - name: Install Rust
       uses: dtolnay/rust-toolchain@stable
@@ -240,6 +243,7 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: ${{ env.NODE_VERSION }}
+        cache: ''
 
     - name: Install dependencies
       working-directory: vscode-extension
