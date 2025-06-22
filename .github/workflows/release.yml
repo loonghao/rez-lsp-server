@@ -272,7 +272,7 @@ jobs:
 
     - name: Install extension dependencies
       working-directory: vscode-extension
-      run: npm ci
+      run: npm install
 
     - name: Compile extension
       working-directory: vscode-extension
