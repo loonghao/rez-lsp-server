@@ -1,0 +1,54 @@
+# Source files
+src/**
+.vscode/**
+.gitignore
+.eslintrc.js
+eslint.config.js
+tsconfig.json
+
+# Build and development scripts (keep only essential ones)
+scripts/debug-*.js
+scripts/test-*.js
+scripts/diagnose-*.js
+scripts/install-*.js
+scripts/final-*.js
+scripts/create-*.js
+scripts/generate-*.js
+
+# Development documentation
+ICON_SETUP.md
+SUCCESS_VERIFICATION.md
+TROUBLESHOOTING.md
+
+# Test files and directories
+test-files/**
+test-workspace/**
+
+# Dependencies (keep only runtime dependencies)
+node_modules/**
+!node_modules/vscode-languageclient/**
+!node_modules/vscode-languageserver-protocol/**
+!node_modules/vscode-languageserver-types/**
+!node_modules/vscode-jsonrpc/**
+!node_modules/semver/**
+!node_modules/balanced-match/**
+
+# Development files
+*.vsix
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Build artifacts (keep compiled output)
+# out/** - keep this for the compiled extension
+
+# Keep server binary
+# server/** - keep this for the embedded LSP server
+
+# Documentation (optional, comment out to include)
+# README.md

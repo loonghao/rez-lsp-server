@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+  <!-- Rez LSP Extension Icon - Based on official Rez logo style -->
+
+  <!-- Background square with rounded corners (VSCode style) -->
+  <rect x="8" y="8" width="112" height="112" rx="16" ry="16"
+        fill="none" stroke="#C5C5C5" stroke-width="2" opacity="0.3"/>
+
+  <!-- Main Rez logo inspired design -->
+  <g transform="translate(64, 64)" fill="#C5C5C5">
+
+    <!-- "R" letter - main element -->
+    <g opacity="0.95">
+      <!-- Vertical stem -->
+      <rect x="-24" y="-32" width="8" height="64"/>
+
+      <!-- Top horizontal bar -->
+      <rect x="-24" y="-32" width="32" height="8"/>
+
+      <!-- Middle horizontal bar -->
+      <rect x="-24" y="-4" width="24" height="8"/>
+
+      <!-- Top right vertical -->
+      <rect x="0" y="-32" width="8" height="36"/>
+
+      <!-- Diagonal leg -->
+      <polygon points="0,4 8,4 24,32 16,32"/>
+    </g>
+
+    <!-- "ez" letters - smaller, stylized -->
+    <g transform="translate(32, 8)" opacity="0.8">
+      <!-- "e" -->
+      <rect x="-4" y="-8" width="12" height="4"/>
+      <rect x="-4" y="-8" width="4" height="16"/>
+      <rect x="-4" y="0" width="8" height="4"/>
+      <rect x="-4" y="8" width="12" height="4"/>
+
+      <!-- "z" -->
+      <rect x="12" y="-8" width="12" height="4"/>
+      <polygon points="12,4 20,4 24,-4 24,0 16,8 24,8 24,12 12,12"/>
+    </g>
+  </g>
+
+  <!-- LSP indicator - small code symbol -->
+  <g transform="translate(100, 28)" fill="#C5C5C5" opacity="0.7">
+    <text x="0" y="0" font-family="monospace" font-size="12" text-anchor="middle">&lt;/&gt;</text>
+  </g>
+
+  <!-- Package/dependency indicators -->
+  <g fill="#C5C5C5" opacity="0.6">
+    <circle cx="24" cy="100" r="3"/>
+    <circle cx="36" cy="100" r="3"/>
+    <circle cx="48" cy="100" r="3"/>
+    <text x="60" y="105" font-family="sans-serif" font-size="10">packages</text>
+  </g>
+
+  <!-- Subtle corner accent -->
+  <path d="M 16 16 L 32 16 L 16 32 Z" fill="#C5C5C5" opacity="0.2"/>
+</svg>

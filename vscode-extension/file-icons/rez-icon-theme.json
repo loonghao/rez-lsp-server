@@ -1,0 +1,47 @@
+{
+    "iconDefinitions": {
+        "rez-package": {
+            "iconPath": "../images/rez-lsp-icon-16x16.png"
+        },
+        "rez-template": {
+            "iconPath": "../images/rez-lsp-icon-16x16.png"
+        },
+        "rez-package-enhanced": {
+            "iconPath": "../images/rez-lsp-icon-enhanced-16x16.png"
+        },
+        "rez-template-enhanced": {
+            "iconPath": "../images/rez-lsp-icon-enhanced-16x16.png"
+        }
+    },
+    "fileExtensions": {
+        "rxt": "rez-template-enhanced"
+    },
+    "fileNames": {
+        "package.py": "rez-package-enhanced"
+    },
+    "languageIds": {
+        "rez-package": "rez-package-enhanced"
+    },
+    "light": {
+        "fileExtensions": {
+            "rxt": "rez-template"
+        },
+        "fileNames": {
+            "package.py": "rez-package"
+        },
+        "languageIds": {
+            "rez-package": "rez-package"
+        }
+    },
+    "highContrast": {
+        "fileExtensions": {
+            "rxt": "rez-template-enhanced"
+        },
+        "fileNames": {
+            "package.py": "rez-package-enhanced"
+        },
+        "languageIds": {
+            "rez-package": "rez-package-enhanced"
+        }
+    }
+}

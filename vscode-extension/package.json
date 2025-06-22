@@ -5,6 +5,7 @@
     "version": "0.1.0",
     "publisher": "rez-lsp",
     "license": "Apache-2.0",
+    "icon": "images/rez-lsp-icon-enhanced-128x128.png",
     "repository": {
         "type": "git",
         "url": "https://github.com/loonghao/rez-lsp-server.git"
@@ -41,12 +42,17 @@
                     "rez"
                 ],
                 "extensions": [
-                    ".py"
+                    ".py",
+                    ".rxt"
                 ],
                 "filenames": [
                     "package.py"
                 ],
-                "configuration": "./language-configuration.json"
+                "configuration": "./language-configuration.json",
+                "icon": {
+                    "light": "./images/rez-lsp-icon-16x16.png",
+                    "dark": "./images/rez-lsp-icon-enhanced-16x16.png"
+                }
             }
         ],
         "grammars": [
@@ -101,15 +107,25 @@
                 "title": "Show Output Channel",
                 "category": "Rez"
             }
+        ],
+        "iconThemes": [
+            {
+                "id": "rez-file-icons",
+                "label": "Rez File Icons",
+                "path": "./file-icons/rez-icon-theme.json"
+            }
         ]
     },
     "scripts": {
-        "vscode:prepublish": "npm run compile",
+        "vscode:prepublish": "npm run build",
+        "build": "npm run compile && npm run copy-server",
         "compile": "tsc -p ./",
+        "copy-server": "node scripts/copy-server.js",
         "watch": "tsc -watch -p ./",
         "lint": "npx eslint src --ext ts",
         "lint:fix": "npx eslint src --ext ts --fix",
         "package": "vsce package",
+        "package-with-server": "npm run build && vsce package",
         "publish": "vsce publish",
         "test": "echo \"No tests specified\" && exit 0"
     },
@@ -119,6 +135,7 @@
         "@typescript-eslint/eslint-plugin": "^8.0.0",
         "@typescript-eslint/parser": "^8.0.0",
         "@vscode/vsce": "^3.5.0",
+        "canvas": "^3.1.1",
         "eslint": "^9.29.0",
         "typescript": "^4.9.4"
     },
