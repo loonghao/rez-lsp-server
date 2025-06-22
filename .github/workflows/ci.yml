@@ -125,11 +125,11 @@ jobs:
     - name: Package extension
       working-directory: vscode-extension
       run: |
-        npm install -g vsce
+        npm install -g @vscode/vsce
         vsce package --out rez-lsp-extension-${{ github.sha }}.vsix
 
     - name: Upload extension artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: vscode-extension
         path: vscode-extension/rez-lsp-extension-${{ github.sha }}.vsix
