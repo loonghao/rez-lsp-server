@@ -1,11 +1,16 @@
 # Rez LSP Extension for VSCode
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/loonghao/rez-lsp-server/main/vscode-extension/images/rez-lsp-icon-128x128.png" alt="Rez LSP Extension Logo" width="128" height="128">
+</p>
+
 This extension provides Language Server Protocol (LSP) support for [Rez package manager](https://github.com/AcademySoftwareFoundation/rez) in Visual Studio Code.
 
 ## Features
 
 - **Intelligent Code Completion**: Auto-complete package names and versions in `requires` lists
 - **Syntax Highlighting**: Enhanced syntax highlighting for Rez package.py files
+- **File Icons**: Custom Rez icons for `package.py` and `.rxt` template files
 - **Hover Information**: Get detailed information about packages on hover
 - **Diagnostics**: Real-time error checking and validation
 - **Go to Definition**: Navigate to package definitions (coming soon)
@@ -106,6 +111,7 @@ code .
 2. The extension will automatically activate when it detects package.py files
 3. Start typing in a `requires` list to see code completion
 4. Hover over package names to see detailed information
+5. Rez files (`package.py` and `.rxt`) will display with custom Rez icons in the file explorer
 
 ## Commands
 
