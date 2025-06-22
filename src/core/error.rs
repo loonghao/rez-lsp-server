@@ -32,6 +32,8 @@ pub enum Error {
     Resolver(ResolverError),
     /// LSP protocol related errors
     Lsp(LspError),
+    /// Invalid file path
+    InvalidPath(String),
     /// I/O related errors
     Io(std::io::Error),
     /// Other errors
@@ -109,6 +111,7 @@ impl fmt::Display for Error {
             Error::Parser(e) => write!(f, "Parser error: {}", e),
             Error::Resolver(e) => write!(f, "Resolver error: {}", e),
             Error::Lsp(e) => write!(f, "LSP error: {}", e),
+            Error::InvalidPath(path) => write!(f, "Invalid path: {}", path),
             Error::Io(e) => write!(f, "I/O error: {}", e),
             Error::Other(msg) => write!(f, "Error: {}", msg),
         }
