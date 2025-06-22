@@ -5,6 +5,45 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+
+## [0.1.1](https://github.com/loonghao/rez-lsp-server/compare/v0.1.0...v0.1.1) - 2025-06-22
+
+### Added
+
+- optimize LSP server log output and remove binary tracking
+- add LSP server commands and status bar monitoring
+
+### Fixed
+
+- resolve TypeScript compilation error with vite.config.ts
+- replace npm ci with npm install in all workflows
+- remove npm cache from ALL GitHub Actions workflows
+- completely remove all npm caching to resolve persistent cache issues
+- replace problematic setup-node cache with manual npm cache
+- resolve GitHub Actions Node.js cache configuration issues
+- resolve command registration timing and clippy warnings
+- resolve VSCode extension command registration issues
+- explicitly disable npm cache to prevent cache resolution errors
+- remove npm cache configuration to resolve cache dependency error
+- replace npm ci with npm install in GitHub Actions
+- remove npm cache configuration from GitHub Actions
+- remove pre-release flag from VSCode extension publishing
+- improve status bar to match rust-analyzer style
+- resolve VSCode extension publishing artifact download failures
+
+### Other
+
+- add extensive logging to diagnose VSCode extension issues
+- update Node.js to v22 and fix npm caching
+- replace webpack with Vite for faster builds
+- optimize VSCode extension bundling with webpack
+- *(deps)* update dependency node to v22
+- *(deps)* update dependency typescript to v5
+- *(deps)* update peter-evans/create-pull-request action to v7
+
+### Security
+
+- fix esbuild vulnerability by upgrading Vite to 6.3.5
 ## [Unreleased]
 
 ## [0.1.0] - 2024-12-22
