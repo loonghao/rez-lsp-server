@@ -1,6 +1,6 @@
 //! Package discovery implementation for Rez.
 
-mod discovery_impl;
 mod cache;
+mod discovery_impl;
 
 pub use discovery_impl::PackageDiscoveryImpl;

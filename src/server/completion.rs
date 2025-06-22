@@ -47,7 +47,11 @@ pub async fn handle_completion(
                             }
                         }
                         Err(e) => {
-                            tracing::warn!("Failed to get versions for package {}: {}", package_name, e);
+                            tracing::warn!(
+                                "Failed to get versions for package {}: {}",
+                                package_name,
+                                e
+                            );
                         }
                     }
                 }

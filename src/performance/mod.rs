@@ -6,7 +6,7 @@ pub mod profiler;
 
 pub use cache::{CacheManager, CacheStats};
 pub use metrics::{MetricsCollector, PerformanceMetrics};
-pub use profiler::{ProfilerGuard, Profiler};
+pub use profiler::{Profiler, ProfilerGuard};
 
 use std::time::{Duration, Instant};
 
@@ -33,7 +33,7 @@ impl Default for PerformanceConfig {
             enable_monitoring: true,
             enable_caching: true,
             cache_size_mb: 100,
-            cache_ttl_seconds: 300, // 5 minutes
+            cache_ttl_seconds: 300,  // 5 minutes
             enable_profiling: false, // Disabled by default for production
             max_metrics_history: 1000,
         }
@@ -216,7 +216,7 @@ mod tests {
     #[test]
     fn test_system_performance_stats() {
         let mut stats = SystemPerformanceStats::new();
-        
+
         stats.update_cache_stats(80, 20);
         assert_eq!(stats.cache_hits, 80);
         assert_eq!(stats.cache_misses, 20);
@@ -236,19 +236,19 @@ mod tests {
     #[test]
     fn test_cache_hit_ratio_calculation() {
         let mut stats = SystemPerformanceStats::new();
-        
+
         // Test with no operations
         stats.update_cache_stats(0, 0);
         assert_eq!(stats.cache_hit_ratio, 0.0);
-        
+
         // Test with perfect hit ratio
         stats.update_cache_stats(100, 0);
         assert_eq!(stats.cache_hit_ratio, 1.0);
-        
+
         // Test with no hits
         stats.update_cache_stats(0, 100);
         assert_eq!(stats.cache_hit_ratio, 0.0);
-        
+
         // Test with mixed results
         stats.update_cache_stats(75, 25);
         assert_eq!(stats.cache_hit_ratio, 0.75);

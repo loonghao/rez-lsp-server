@@ -1,11 +1,11 @@
 //! Caching system for performance optimization.
 
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::hash::Hash;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
-use serde::{Serialize, Deserialize};
 
 /// A cache entry with expiration time.
 #[derive(Debug, Clone)]
@@ -69,11 +69,11 @@ where
     /// Put a value into the cache with custom TTL.
     pub async fn put_with_ttl(&self, key: K, value: V, ttl: Duration) {
         let mut data = self.data.write().await;
-        
+
         // Remove expired entries if we're at capacity
         if data.len() >= self.max_size {
             self.cleanup_expired(&mut data);
-            
+
             // If still at capacity, remove oldest entry
             if data.len() >= self.max_size {
                 if let Some(oldest_key) = self.find_oldest_key(&data) {
@@ -81,7 +81,7 @@ where
                 }
             }
         }
-        
+
         data.insert(key, CacheEntry::new(value, ttl));
     }
 
@@ -103,7 +103,7 @@ where
         let total_entries = data.len();
         let expired_entries = data.values().filter(|entry| entry.is_expired()).count();
         let active_entries = total_entries - expired_entries;
-        
+
         CacheStats {
             total_entries,
             active_entries,
@@ -242,10 +242,18 @@ impl CacheManager {
         let completion_stats = self.completion_cache.stats().await;
 
         CacheStats {
-            total_entries: package_stats.total_entries + validation_stats.total_entries + completion_stats.total_entries,
-            active_entries: package_stats.active_entries + validation_stats.active_entries + completion_stats.active_entries,
-            expired_entries: package_stats.expired_entries + validation_stats.expired_entries + completion_stats.expired_entries,
-            max_size: package_stats.max_size + validation_stats.max_size + completion_stats.max_size,
+            total_entries: package_stats.total_entries
+                + validation_stats.total_entries
+                + completion_stats.total_entries,
+            active_entries: package_stats.active_entries
+                + validation_stats.active_entries
+                + completion_stats.active_entries,
+            expired_entries: package_stats.expired_entries
+                + validation_stats.expired_entries
+                + completion_stats.expired_entries,
+            max_size: package_stats.max_size
+                + validation_stats.max_size
+                + completion_stats.max_size,
             hit_ratio,
         }
     }
@@ -275,26 +283,35 @@ mod tests {
     #[tokio::test]
     async fn test_cache_basic_operations() {
         let cache = Cache::new(Duration::from_secs(1), 10);
-        
+
         // Test put and get
         cache.put("key1".to_string(), "value1".to_string()).await;
-        assert_eq!(cache.get(&"key1".to_string()).await, Some("value1".to_string()));
-        
+        assert_eq!(
+            cache.get(&"key1".to_string()).await,
+            Some("value1".to_string())
+        );
+
         // Test non-existent key
         assert_eq!(cache.get(&"key2".to_string()).await, None);
-        
+
         // Test remove
-        assert_eq!(cache.remove(&"key1".to_string()).await, Some("value1".to_string()));
+        assert_eq!(
+            cache.remove(&"key1".to_string()).await,
+            Some("value1".to_string())
+        );
         assert_eq!(cache.get(&"key1".to_string()).await, None);
     }
 
     #[tokio::test]
     async fn test_cache_expiration() {
         let cache = Cache::new(Duration::from_millis(50), 10);
-        
+
         cache.put("key1".to_string(), "value1".to_string()).await;
-        assert_eq!(cache.get(&"key1".to_string()).await, Some("value1".to_string()));
-        
+        assert_eq!(
+            cache.get(&"key1".to_string()).await,
+            Some("value1".to_string())
+        );
+
         // Wait for expiration
         sleep(Duration::from_millis(60)).await;
         assert_eq!(cache.get(&"key1".to_string()).await, None);
@@ -303,11 +320,11 @@ mod tests {
     #[tokio::test]
     async fn test_cache_size_limit() {
         let cache = Cache::new(Duration::from_secs(10), 2);
-        
+
         cache.put("key1".to_string(), "value1".to_string()).await;
         cache.put("key2".to_string(), "value2".to_string()).await;
         cache.put("key3".to_string(), "value3".to_string()).await;
-        
+
         let stats = cache.stats().await;
         assert!(stats.total_entries <= 2);
     }
@@ -315,10 +332,10 @@ mod tests {
     #[tokio::test]
     async fn test_cache_stats() {
         let cache = Cache::new(Duration::from_secs(1), 10);
-        
+
         cache.put("key1".to_string(), "value1".to_string()).await;
         cache.put("key2".to_string(), "value2".to_string()).await;
-        
+
         let stats = cache.stats().await;
         assert_eq!(stats.active_entries, 2);
         assert_eq!(stats.max_size, 10);
@@ -328,12 +345,20 @@ mod tests {
     async fn test_cache_manager() {
         let config = super::super::PerformanceConfig::default();
         let manager = CacheManager::new(&config);
-        
+
         // Test completion cache
-        manager.put_completions("test_key".to_string(), vec!["comp1".to_string(), "comp2".to_string()]).await;
+        manager
+            .put_completions(
+                "test_key".to_string(),
+                vec!["comp1".to_string(), "comp2".to_string()],
+            )
+            .await;
         let completions = manager.get_completions("test_key").await;
-        assert_eq!(completions, Some(vec!["comp1".to_string(), "comp2".to_string()]));
-        
+        assert_eq!(
+            completions,
+            Some(vec!["comp1".to_string(), "comp2".to_string()])
+        );
+
         // Test stats
         let stats = manager.get_stats().await;
         assert!(stats.hit_ratio > 0.0);
