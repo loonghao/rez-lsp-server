@@ -31,14 +31,6 @@ jobs:
       with:
         node-version: ${{ env.NODE_VERSION }}
 
-    - name: Cache npm dependencies
-      uses: actions/cache@v4
-      with:
-        path: ~/.npm
-        key: ${{ runner.os }}-node-${{ hashFiles('vscode-extension/package-lock.json') }}
-        restore-keys: |
-          ${{ runner.os }}-node-
-
     - name: Install dependencies
       working-directory: vscode-extension
       run: npm install
@@ -88,14 +80,6 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: ${{ env.NODE_VERSION }}
-
-    - name: Cache npm dependencies
-      uses: actions/cache@v4
-      with:
-        path: ~/.npm
-        key: ${{ runner.os }}-node-${{ hashFiles('vscode-extension/package-lock.json') }}
-        restore-keys: |
-          ${{ runner.os }}-node-
 
     - name: Install extension dependencies
       working-directory: vscode-extension
@@ -157,14 +141,6 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: ${{ env.NODE_VERSION }}
-
-    - name: Cache npm dependencies
-      uses: actions/cache@v4
-      with:
-        path: ~/.npm
-        key: ${{ runner.os }}-node-${{ hashFiles('vscode-extension/package-lock.json') }}
-        restore-keys: |
-          ${{ runner.os }}-node-
 
     - name: Install Rust
       uses: dtolnay/rust-toolchain@stable
@@ -264,14 +240,6 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: ${{ env.NODE_VERSION }}
-
-    - name: Cache npm dependencies
-      uses: actions/cache@v4
-      with:
-        path: ~/.npm
-        key: ${{ runner.os }}-node-${{ hashFiles('vscode-extension/package-lock.json') }}
-        restore-keys: |
-          ${{ runner.os }}-node-
 
     - name: Install dependencies
       working-directory: vscode-extension
