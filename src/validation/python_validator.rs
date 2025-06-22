@@ -12,10 +12,13 @@ pub struct PythonValidator {
 
 struct PythonPatterns {
     /// Pattern for detecting invalid indentation
+    #[allow(dead_code)]
     invalid_indent: Regex,
     /// Pattern for detecting unclosed brackets
+    #[allow(dead_code)]
     unclosed_brackets: Regex,
     /// Pattern for detecting invalid string literals
+    #[allow(dead_code)]
     invalid_strings: Regex,
     /// Pattern for detecting invalid variable names
     invalid_names: Regex,

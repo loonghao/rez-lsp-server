@@ -25,6 +25,7 @@ struct RezPatterns {
     /// Pattern for requirement strings
     requirement_pattern: Regex,
     /// Pattern for tool definitions
+    #[allow(dead_code)]
     tool_pattern: Regex,
 }
 
@@ -264,7 +265,7 @@ impl RezValidator {
         if let Some((line_num, value)) = fields.get("requires") {
             // Parse the requires list
             if let Some(requirements) = self.parse_list_value(value) {
-                for (_req_index, requirement) in requirements.iter().enumerate() {
+                for requirement in requirements.iter() {
                     let clean_req = self.clean_string_value(requirement);
 
                     // Validate requirement format

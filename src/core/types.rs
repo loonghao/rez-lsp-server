@@ -175,8 +175,8 @@ impl VersionConstraint {
 
                 // Check for upper bound
                 let remaining = &requirement[range_start + plus_pos + 1..];
-                if remaining.starts_with('<') {
-                    let max_version = Version::new(&remaining[1..]);
+                if let Some(stripped) = remaining.strip_prefix('<') {
+                    let max_version = Version::new(stripped);
                     return Ok((
                         name,
                         VersionConstraint::Range {
@@ -360,11 +360,9 @@ impl Ord for Version {
                 (Some(_), None) => {
                     // self has more tokens, check if remaining tokens are significant
                     // If remaining tokens are all zeros, versions are equal
-                    let remaining_significant = self.tokens[i..].iter().any(|t| match t {
-                        VersionToken::Number(0) => false,
-                        VersionToken::Underscore => false,
-                        _ => true,
-                    });
+                    let remaining_significant = self.tokens[i..]
+                        .iter()
+                        .any(|t| !matches!(t, VersionToken::Number(0) | VersionToken::Underscore));
                     return if remaining_significant {
                         Ordering::Greater
                     } else {
@@ -373,11 +371,9 @@ impl Ord for Version {
                 }
                 (None, Some(_)) => {
                     // other has more tokens, check if remaining tokens are significant
-                    let remaining_significant = other.tokens[i..].iter().any(|t| match t {
-                        VersionToken::Number(0) => false,
-                        VersionToken::Underscore => false,
-                        _ => true,
-                    });
+                    let remaining_significant = other.tokens[i..]
+                        .iter()
+                        .any(|t| !matches!(t, VersionToken::Number(0) | VersionToken::Underscore));
                     return if remaining_significant {
                         Ordering::Less
                     } else {
@@ -428,14 +424,14 @@ impl Requirement {
         let requirement_str = requirement_str.trim();
 
         // Handle conflict requirements (starting with !)
-        if requirement_str.starts_with('!') {
-            let (name, constraint) = VersionConstraint::parse(&requirement_str[1..])?;
+        if let Some(stripped) = requirement_str.strip_prefix('!') {
+            let (name, constraint) = VersionConstraint::parse(stripped)?;
             return Ok(Self::conflict(name, constraint));
         }
 
         // Handle weak requirements (starting with ~)
-        if requirement_str.starts_with('~') {
-            let (name, constraint) = VersionConstraint::parse(&requirement_str[1..])?;
+        if let Some(stripped) = requirement_str.strip_prefix('~') {
+            let (name, constraint) = VersionConstraint::parse(stripped)?;
             return Ok(Self::weak(name, constraint));
         }
 

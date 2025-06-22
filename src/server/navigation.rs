@@ -145,6 +145,7 @@ impl NavigationHandler {
         // - Tools
         // - Functions (build, commands, etc.)
 
+        #[allow(deprecated)]
         let symbols = vec![
             DocumentSymbol {
                 name: "name".to_string(),
@@ -152,6 +153,7 @@ impl NavigationHandler {
                 kind: SymbolKind::VARIABLE,
                 tags: None,
                 deprecated: None,
+
                 range: Range {
                     start: Position {
                         line: 0,
@@ -216,14 +218,16 @@ impl NavigationHandler {
 
             for package in packages {
                 if let Ok(location) = self.package_to_location(&package) {
-                    symbols.push(SymbolInformation {
+                    #[allow(deprecated)]
+                    let symbol = SymbolInformation {
                         name: package.name.clone(),
                         kind: SymbolKind::PACKAGE,
                         tags: None,
                         deprecated: None,
                         location,
                         container_name: None,
-                    });
+                    };
+                    symbols.push(symbol);
                 }
             }
 
@@ -256,6 +260,7 @@ impl NavigationHandler {
 }
 
 /// Extract package references from text content.
+#[allow(dead_code)]
 pub fn extract_package_references(content: &str) -> Vec<PackageReference> {
     let mut references = Vec::new();
 
@@ -297,6 +302,7 @@ pub fn extract_package_references(content: &str) -> Vec<PackageReference> {
 
 /// A reference to a package in source code.
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct PackageReference {
     /// Name of the referenced package
     pub package_name: String,
@@ -308,6 +314,7 @@ pub struct PackageReference {
     pub length: u32,
 }
 
+#[allow(dead_code)]
 impl PackageReference {
     /// Convert to LSP Range.
     pub fn to_range(&self) -> Range {
@@ -374,9 +381,8 @@ requires = ["python>=3.7", "maya>=2020", "houdini"]
         use tokio::sync::RwLock;
 
         let package_discovery = Arc::new(RwLock::new(None));
-        let handler = NavigationHandler::new(package_discovery);
+        let _handler = NavigationHandler::new(package_discovery);
 
-        // Basic smoke test
-        assert!(true); // Handler created successfully
+        // Basic smoke test - handler created successfully
     }
 }
