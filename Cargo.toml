@@ -9,7 +9,14 @@ repository = "https://github.com/loonghao/rez-lsp-server"
 homepage = "https://github.com/loonghao/rez-lsp-server"
 documentation = "https://docs.rs/rez-lsp-server"
 readme = "README.md"
-keywords = ["rez", "lsp", "language-server", "vfx", "package-manager"]
+keywords = [
+    "rez",
+    "lsp",
+    "language-server",
+    "vfx",
+    "package-manager",
+    "pipeline",
+]
 categories = ["development-tools", "text-editors"]
 exclude = [
     "test_packages/*",

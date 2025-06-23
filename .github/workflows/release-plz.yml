@@ -8,19 +8,36 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
+    inputs:
+      force_release:
+        description: 'Force release even if no changes detected'
+        required: false
+        default: false
+        type: boolean
 
 jobs:
   # Release unpublished packages to crates.io
   release-plz-release:
     name: Release-plz release
     runs-on: ubuntu-latest
-    if: ${{ github.repository_owner == 'loonghao' && !contains(github.event.head_commit.message, '[skip release]') }}
+    if: ${{ github.event_name == 'workflow_dispatch' || !contains(github.event.head_commit.message, '[skip release]') }}
     permissions:
       contents: write
     concurrency:
-      group: release-plz-release-${{ github.ref }}
-      cancel-in-progress: false
+      group: release-plz-release
+      cancel-in-progress: true
     steps:
+      - name: Debug release-plz trigger
+        run: |
+          echo "🔍 Release-plz release job triggered"
+          echo "Repository: ${{ github.repository }}"
+          echo "Repository owner: ${{ github.repository_owner }}"
+          echo "Event name: ${{ github.event_name }}"
+          echo "Ref: ${{ github.ref }}"
+          echo "Commit message: ${{ github.event.head_commit.message }}"
+          echo "Skip release check: ${{ contains(github.event.head_commit.message, '[skip release]') }}"
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
@@ -44,14 +61,24 @@ jobs:
   release-plz-pr:
     name: Release-plz PR
     runs-on: ubuntu-latest
-    if: ${{ github.repository_owner == 'loonghao' && !contains(github.event.head_commit.message, '[skip release]') }}
+    if: ${{ github.event_name == 'workflow_dispatch' || !contains(github.event.head_commit.message, '[skip release]') }}
     permissions:
       contents: write
       pull-requests: write
     concurrency:
-      group: release-plz-pr-${{ github.ref }}
-      cancel-in-progress: false
+      group: release-plz-pr
+      cancel-in-progress: true
     steps:
+      - name: Debug release-plz PR trigger
+        run: |
+          echo "🔍 Release-plz PR job triggered"
+          echo "Repository: ${{ github.repository }}"
+          echo "Repository owner: ${{ github.repository_owner }}"
+          echo "Event name: ${{ github.event_name }}"
+          echo "Ref: ${{ github.ref }}"
+          echo "Commit message: ${{ github.event.head_commit.message }}"
+          echo "Skip release check: ${{ contains(github.event.head_commit.message, '[skip release]') }}"
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
