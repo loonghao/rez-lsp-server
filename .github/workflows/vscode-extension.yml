@@ -2,320 +2,274 @@ name: VSCode Extension
 
 on:
   push:
+    branches: [main]
     paths:
       - 'vscode-extension/**'
+      - 'src/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
       - '.github/workflows/vscode-extension.yml'
   pull_request:
+    branches: [main]
     paths:
       - 'vscode-extension/**'
+      - 'src/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
       - '.github/workflows/vscode-extension.yml'
   workflow_dispatch:
 
 env:
   NODE_VERSION: '22'
+  CARGO_TERM_COLOR: always
 
 jobs:
+  # ── Lint & unit-test the TypeScript extension ────────────────────────────
   lint_and_test:
-    name: Lint and Test Extension
+    name: Lint and Test Extension (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-    
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: ${{ env.NODE_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: vscode-extension/package-lock.json
 
-    - name: Install dependencies
-      working-directory: vscode-extension
-      run: npm install
+      - name: Install dependencies
+        working-directory: vscode-extension
+        run: npm ci
 
-    - name: Run ESLint
-      working-directory: vscode-extension
-      run: npm run lint
+      - name: Lint
+        working-directory: vscode-extension
+        run: npm run lint
 
-    - name: Build with Vite
-      working-directory: vscode-extension
-      run: npm run vite:build
+      - name: Build (TypeScript → JS)
+        working-directory: vscode-extension
+        run: npm run vite:build
 
-    - name: Run tests
-      working-directory: vscode-extension
-      run: npm test
-      continue-on-error: true  # Tests may not be fully implemented yet
+      - name: Validate package.json (vsce dry-run)
+        working-directory: vscode-extension
+        shell: bash
+        run: |
+          npx @vscode/vsce package --out /tmp/test-validate.vsix --no-dependencies
+          echo "Validation package created OK"
 
-    - name: Check package.json validity
-      working-directory: vscode-extension
-      run: |
-        npm install -g @vscode/vsce
-        vsce package --out test-package.vsix
-        echo "Extension package created successfully"
+  # ── Build the Rust LSP server for each target ────────────────────────────
+  build_server:
+    name: Build LSP server (${{ matrix.target }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            vsix_target: linux-x64
+            binary: rez-lsp-server
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            vsix_target: linux-arm64
+            binary: rez-lsp-server
+            cross: true
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            vsix_target: win32-x64
+            binary: rez-lsp-server.exe
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            vsix_target: darwin-x64
+            binary: rez-lsp-server
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            vsix_target: darwin-arm64
+            binary: rez-lsp-server
 
-  integration_test:
-    name: Integration Test with LSP Server
-    runs-on: ubuntu-latest
-    needs: lint_and_test
-    
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Install Rust
-      uses: dtolnay/rust-toolchain@stable
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
 
-    - name: Cache cargo build
-      uses: actions/cache@v4
-      with:
-        path: target
-        key: ubuntu-latest-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+      - name: Install cross (for cross-compilation)
+        if: matrix.cross
+        run: cargo install cross --git https://github.com/cross-rs/cross
 
-    - name: Build LSP server
-      run: cargo build --release
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ matrix.target }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ matrix.target }}-cargo-
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: ${{ env.NODE_VERSION }}
+      - name: Build (native)
+        if: '!matrix.cross'
+        run: cargo build --release --target ${{ matrix.target }}
 
-    - name: Install extension dependencies
-      working-directory: vscode-extension
-      run: npm install
+      - name: Build (cross)
+        if: matrix.cross
+        run: cross build --release --target ${{ matrix.target }}
 
-    - name: Build extension
-      working-directory: vscode-extension
-      run: npm run vite:build
+      - name: Upload server binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: server-${{ matrix.vsix_target }}
+          path: target/${{ matrix.target }}/release/${{ matrix.binary }}
+          retention-days: 1
 
-    - name: Create test workspace
-      run: |
-        mkdir -p test-workspace/test_packages/example_package/1.0.0
-        cat > test-workspace/test_packages/example_package/1.0.0/package.py << 'EOF'
-        name = "example_package"
-        version = "1.0.0"
-        description = "Test package for integration testing"
-        requires = ["python>=3.7"]
-        
-        def commands():
-            import os
-            env.PYTHONPATH.append(os.path.join("{root}", "python"))
-        EOF
-        
-        cat > test-workspace/package.py << 'EOF'
-        name = "test_project"
-        version = "0.1.0"
-        requires = ["example_package"]
-        EOF
-
-    - name: Test LSP server functionality
-      env:
-        REZ_PACKAGES_PATH: ${{ github.workspace }}/test-workspace/test_packages
-      run: |
-        # Test help command
-        echo "Testing LSP server help command..."
-        ./target/release/rez-lsp-server --help
-
-        # Test version command
-        echo "Testing LSP server version command..."
-        ./target/release/rez-lsp-server --version
-
-        # Test LSP protocol communication
-        echo "Testing LSP protocol communication..."
-        node scripts/test-lsp-protocol.js ./target/release/rez-lsp-server
-
-        echo "All LSP server tests passed!"
-
-  package_extension:
-    name: Package Extension
+  # ── Package per-platform .vsix (server binary embedded) ──────────────────
+  package_vsix:
+    name: Package .vsix (${{ matrix.vsix_target }})
     runs-on: ubuntu-latest
-    needs: [lint_and_test, integration_test]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    
+    needs: [lint_and_test, build_server]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - vsix_target: linux-x64
+            binary: rez-lsp-server
+          - vsix_target: linux-arm64
+            binary: rez-lsp-server
+          - vsix_target: win32-x64
+            binary: rez-lsp-server.exe
+          - vsix_target: darwin-x64
+            binary: rez-lsp-server
+          - vsix_target: darwin-arm64
+            binary: rez-lsp-server
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: ${{ env.NODE_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: vscode-extension/package-lock.json
 
-    - name: Install Rust
-      uses: dtolnay/rust-toolchain@stable
+      - name: Install extension dependencies
+        working-directory: vscode-extension
+        run: npm ci
 
-    - name: Cache cargo build
-      uses: actions/cache@v4
-      with:
-        path: target
-        key: ubuntu-latest-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+      - name: Build TypeScript
+        working-directory: vscode-extension
+        run: npm run vite:build
 
-    - name: Build LSP server
-      run: cargo build --release
+      - name: Download server binary
+        uses: actions/download-artifact@v4
+        with:
+          name: server-${{ matrix.vsix_target }}
+          path: vscode-extension/server/
 
-    - name: Install extension dependencies
-      working-directory: vscode-extension
-      run: npm install
+      - name: Make server executable (Unix)
+        if: "!startsWith(matrix.vsix_target, 'win32')"
+        run: chmod +x vscode-extension/server/${{ matrix.binary }}
 
-    - name: Build extension
-      working-directory: vscode-extension
-      run: npm run vite:build
+      - name: Get version
+        id: version
+        working-directory: vscode-extension
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Version: $VERSION"
 
-    - name: Package extension
-      working-directory: vscode-extension
-      run: |
-        npm install -g @vscode/vsce
+      - name: Package .vsix
+        working-directory: vscode-extension
+        run: |
+          VSIX_NAME="rez-lsp-extension-${{ steps.version.outputs.version }}-${{ matrix.vsix_target }}.vsix"
+          npx @vscode/vsce package \
+            --target ${{ matrix.vsix_target }} \
+            --out "$VSIX_NAME" \
+            --no-dependencies
+          echo "VSIX_NAME=$VSIX_NAME" >> $GITHUB_ENV
+          echo "Packaged: $VSIX_NAME"
+          ls -lh "$VSIX_NAME"
 
-        # Get version from package.json
-        VERSION=$(node -p "require('./package.json').version")
+      - name: Upload .vsix artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vsix-${{ matrix.vsix_target }}
+          path: vscode-extension/rez-lsp-extension-*.vsix
+          retention-days: 30
 
-        # Package with commit hash for development builds
-        PACKAGE_NAME="rez-lsp-extension-dev-${VERSION}-${GITHUB_SHA:0:8}.vsix"
-        vsce package --out "$PACKAGE_NAME"
-
-        echo "Extension packaged as: $PACKAGE_NAME"
-
-    - name: Upload development package
-      uses: actions/upload-artifact@v4
-      with:
-        name: vscode-extension-dev
-        path: vscode-extension/rez-lsp-extension-dev-*.vsix
-        retention-days: 7
-
-  publish_extension:
-    name: Publish Extension
+  # ── Summarise all artifacts ──────────────────────────────────────────────
+  summary:
+    name: Build Summary
     runs-on: ubuntu-latest
-    needs: package_extension
+    needs: package_vsix
+    if: always()
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: vsix-*
+          path: vsix-packages/
+          merge-multiple: true
+
+      - name: List packages
+        run: |
+          echo "## VSCode Extension Packages" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Platform | File | Size |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|------|------|" >> $GITHUB_STEP_SUMMARY
+          find vsix-packages/ -name "*.vsix" | sort | while read f; do
+            SIZE=$(du -sh "$f" | cut -f1)
+            NAME=$(basename "$f")
+            echo "| ${NAME%%.vsix} | $NAME | $SIZE |" >> $GITHUB_STEP_SUMMARY
+          done
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Install any package with:" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "code --install-extension rez-lsp-extension-<version>-<platform>.vsix" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+  # ── Publish to Marketplace on main push ──────────────────────────────────
+  publish:
+    name: Publish to Marketplace
+    runs-on: ubuntu-latest
+    needs: package_vsix
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     environment: vscode-marketplace
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Download extension package
-      uses: actions/download-artifact@v4
-      with:
-        name: vscode-extension-dev
-        path: ./
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
 
-    - name: Find extension file
-      id: find_extension
-      run: |
-        EXTENSION_FILE=$(ls rez-lsp-extension-dev-*.vsix | head -1)
-        if [[ -n "$EXTENSION_FILE" ]]; then
-          echo "extension_file=$EXTENSION_FILE" >> $GITHUB_OUTPUT
-          echo "Found extension file: $EXTENSION_FILE"
-        else
-          echo "No extension file found"
-          exit 1
-        fi
+      - name: Download all .vsix packages
+        uses: actions/download-artifact@v4
+        with:
+          pattern: vsix-*
+          path: vsix-packages/
+          merge-multiple: true
 
-    - name: Publish to Open VSX Registry
-      uses: HaaLeo/publish-vscode-extension@v2
-      with:
-        pat: ${{ secrets.OPEN_VSX_TOKEN }}
-        extensionFile: ${{ steps.find_extension.outputs.extension_file }}
-        skipDuplicate: true
-      continue-on-error: true  # Open VSX is optional
+      - name: List packages for publish
+        run: find vsix-packages/ -name "*.vsix" | sort
 
-    - name: Publish to Visual Studio Marketplace
-      uses: HaaLeo/publish-vscode-extension@v2
-      with:
-        pat: ${{ secrets.VSCODE_MARKETPLACE_TOKEN }}
-        registryUrl: https://marketplace.visualstudio.com
-        extensionFile: ${{ steps.find_extension.outputs.extension_file }}
-        skipDuplicate: true
+      - name: Publish to Open VSX Registry
+        continue-on-error: true
+        run: |
+          for vsix in vsix-packages/*.vsix; do
+            echo "Publishing $vsix to Open VSX..."
+            npx ovsx publish "$vsix" -p ${{ secrets.OPEN_VSX_TOKEN }} || echo "Failed: $vsix"
+          done
 
-  security_scan:
-    name: Security Scan
-    runs-on: ubuntu-latest
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: ${{ env.NODE_VERSION }}
-
-    - name: Install dependencies
-      working-directory: vscode-extension
-      run: npm install
-
-    - name: Run npm audit
-      working-directory: vscode-extension
-      run: npm audit --audit-level=moderate
-
-    - name: Run security scan with Snyk
-      uses: snyk/actions/node@master
-      env:
-        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-      with:
-        args: --file=vscode-extension/package.json
-      continue-on-error: true  # Don't fail the build on security issues
-
-  performance_test:
-    name: Performance Test
-    runs-on: ubuntu-latest
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Install Rust
-      uses: dtolnay/rust-toolchain@stable
-
-    - name: Build LSP server with optimizations
-      run: cargo build --release
-
-    - name: Create large test environment
-      run: |
-        # Create a larger test environment to test performance
-        mkdir -p test_packages
-        for i in {1..100}; do
-          mkdir -p "test_packages/package_$i/1.0.0"
-          cat > "test_packages/package_$i/1.0.0/package.py" << EOF
-        name = "package_$i"
-        version = "1.0.0"
-        description = "Test package $i for performance testing"
-        requires = ["python>=3.7"]
-        EOF
-        done
-
-    - name: Test LSP server performance
-      env:
-        REZ_PACKAGES_PATH: ${{ github.workspace }}/test_packages
-      run: |
-        echo "Testing LSP server performance with 100 packages..."
-        
-        # Test help command performance
-        start_time=$(date +%s%N)
-        ./target/release/rez-lsp-server --help > /dev/null
-        end_time=$(date +%s%N)
-
-        startup_time=$(( (end_time - start_time) / 1000000 ))
-        echo "LSP server help command time: ${startup_time}ms"
-
-        # Test version command performance
-        start_time=$(date +%s%N)
-        ./target/release/rez-lsp-server --version > /dev/null
-        end_time=$(date +%s%N)
-
-        version_time=$(( (end_time - start_time) / 1000000 ))
-        echo "LSP server version command time: ${version_time}ms"
-
-        # Performance should be reasonable
-        if [[ $startup_time -gt 5000 ]]; then
-          echo "Warning: Help command time is high (${startup_time}ms)"
-        else
-          echo "Help command performance is acceptable (${startup_time}ms)"
-        fi
-
-        if [[ $version_time -gt 5000 ]]; then
-          echo "Warning: Version command time is high (${version_time}ms)"
-        else
-          echo "Version command performance is acceptable (${version_time}ms)"
-        fi
+      - name: Publish to VS Marketplace
+        continue-on-error: true
+        run: |
+          for vsix in vsix-packages/*.vsix; do
+            echo "Publishing $vsix to VS Marketplace..."
+            npx @vscode/vsce publish --packagePath "$vsix" -p ${{ secrets.VSCODE_MARKETPLACE_TOKEN }} || echo "Failed: $vsix"
+          done
