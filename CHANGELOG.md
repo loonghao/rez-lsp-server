@@ -63,6 +63,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - multi-platform .vsix packaging, rez/rez-next detection, fix release-plz
 
+### Other
+
+- release v0.1.3
+
+## [0.1.3](https://github.com/loonghao/rez-lsp-server/compare/v0.1.2...v0.1.3) - 2026-04-12
+
+### Added
+
+- multi-platform .vsix packaging, rez/rez-next detection, fix release-plz
+
 ## [0.1.0] - 2024-12-22
 
 ### Added
