@@ -73,11 +73,8 @@ jobs:
       with:
         components: rustfmt, clippy
 
-    - name: Cache cargo build
-      uses: actions/cache@v4
-      with:
-        path: target
-        key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+    - name: Cache cargo
+      uses: Swatinem/rust-cache@v2
 
     - name: Run tests
       run: cargo test --lib --verbose
@@ -130,11 +127,10 @@ jobs:
       with:
         targets: ${{ matrix.target }}
 
-    - name: Cache cargo build
-      uses: actions/cache@v4
+    - name: Cache cargo
+      uses: Swatinem/rust-cache@v2
       with:
-        path: target
-        key: ${{ matrix.target }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+        shared-key: ${{ matrix.target }}
 
     - name: Install cross-compilation tools
       if: matrix.cross == true
@@ -202,10 +198,10 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
+    - name: Setup vx
+      uses: loonghao/vx@main
       with:
-        node-version: '22'
+        tools: node
 
     - name: Set artifact name
       id: artifact_name
@@ -364,10 +360,10 @@ jobs:
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && !contains(github.event.head_commit.message, '[skip publish]')
     environment: vscode-marketplace
     steps:
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
+    - name: Setup vx
+      uses: loonghao/vx@main
       with:
-        node-version: '22'
+        tools: node
 
     - name: Install vsce and ovsx
       run: |

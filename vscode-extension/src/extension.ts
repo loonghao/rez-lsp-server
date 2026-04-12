@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
+import { execSync } from 'child_process';
 import {
     LanguageClient,
     LanguageClientOptions,
@@ -114,8 +115,95 @@ function testServerAccessibility(serverPath: string): boolean {
     }
 }
 
+// ---------------------------------------------------------------------------
+// rez / rez-next detection helpers
+// ---------------------------------------------------------------------------
+
+interface RezEnvironment {
+    rezPath: string | null;
+    rezNextPath: string | null;
+    packagesPaths: string[];
+    isRezAvailable: boolean;
+    isRezNextAvailable: boolean;
+}
+
+/**
+ * Detect rez.exe / rez-next on PATH and read REZ_PACKAGES_PATH.
+ * All errors are swallowed — the extension works without rez installed.
+ */
+function detectRezEnvironment(): RezEnvironment {
+    const env: RezEnvironment = {
+        rezPath: null,
+        rezNextPath: null,
+        packagesPaths: [],
+        isRezAvailable: false,
+        isRezNextAvailable: false
+    };
+
+    // Detect legacy rez
+    const rezCmd = process.platform === 'win32' ? 'where rez 2>nul' : 'which rez 2>/dev/null';
+    try {
+        const result = execSync(rezCmd, { encoding: 'utf8', timeout: 3000 }).trim();
+        if (result) {
+            env.rezPath = result.split('\n')[0].trim();
+            env.isRezAvailable = true;
+        }
+    } catch { /* rez not found */ }
+
+    // Detect rez-next
+    const rezNextCmd = process.platform === 'win32' ? 'where rez-next 2>nul' : 'which rez-next 2>/dev/null';
+    try {
+        const result = execSync(rezNextCmd, { encoding: 'utf8', timeout: 3000 }).trim();
+        if (result) {
+            env.rezNextPath = result.split('\n')[0].trim();
+            env.isRezNextAvailable = true;
+        }
+    } catch { /* rez-next not found */ }
+
+    // Read REZ_PACKAGES_PATH from environment
+    const rezPackagesPath = process.env.REZ_PACKAGES_PATH ?? '';
+    if (rezPackagesPath) {
+        const sep = process.platform === 'win32' ? ';' : ':';
+        env.packagesPaths = rezPackagesPath.split(sep).filter(p => p.length > 0);
+    }
+
+    return env;
+}
+
+/**
+ * Build the environment variables to pass to the LSP server process,
+ * merging VSCode configuration with detected rez environment.
+ */
+function buildServerEnv(
+    rezEnv: RezEnvironment,
+    traceLevel: string,
+    extraPackagePaths: string[]
+): NodeJS.ProcessEnv {
+    const allPaths = [...rezEnv.packagesPaths, ...extraPackagePaths].filter(Boolean);
+    const sep = process.platform === 'win32' ? ';' : ':';
+
+    const env: NodeJS.ProcessEnv = {
+        ...process.env,
+        RUST_LOG: traceLevel === 'verbose' ? 'debug' : 'info',
+        RUST_BACKTRACE: '1'
+    };
+
+    if (allPaths.length > 0) {
+        env.REZ_PACKAGES_PATH = allPaths.join(sep);
+    }
+
+    if (rezEnv.rezPath) {
+        env.REZ_EXECUTABLE = rezEnv.rezPath;
+    }
+
+    if (rezEnv.rezNextPath) {
+        env.REZ_NEXT_EXECUTABLE = rezEnv.rezNextPath;
+    }
+
+    return env;
+}
+
 function findLspServer(context: vscode.ExtensionContext): string {
-    // Try to find embedded server first
     const serverBinary = process.platform === 'win32' ? 'rez-lsp-server.exe' : 'rez-lsp-server';
     const embeddedServerPath = path.join(context.extensionPath, 'server', serverBinary);
 
@@ -156,6 +244,36 @@ export function activate(context: vscode.ExtensionContext) {
     outputChannel = vscode.window.createOutputChannel('Rez LSP');
     outputChannel.show(true);
     outputChannel.appendLine('🎯 Rez LSP Extension activated successfully!');
+
+    // Get configuration early (needed for rez path overrides)
+    const config = vscode.workspace.getConfiguration('rezLsp');
+
+    // Detect rez / rez-next on PATH
+    const rezEnv = detectRezEnvironment();
+
+    // Override with explicit config if set
+    const configRezPath = config.get<string>('rezExecutable', '');
+    const configRezNextPath = config.get<string>('rezNextExecutable', '');
+    if (configRezPath) {
+        rezEnv.rezPath = configRezPath;
+        rezEnv.isRezAvailable = true;
+    }
+    if (configRezNextPath) {
+        rezEnv.rezNextPath = configRezNextPath;
+        rezEnv.isRezNextAvailable = true;
+    }
+
+    if (rezEnv.isRezAvailable) {
+        outputChannel.appendLine(`✅ rez detected: ${rezEnv.rezPath}`);
+    } else {
+        outputChannel.appendLine('ℹ️ rez not found on PATH — completions will use built-in package discovery');
+    }
+    if (rezEnv.isRezNextAvailable) {
+        outputChannel.appendLine(`✅ rez-next detected: ${rezEnv.rezNextPath}`);
+    }
+    if (rezEnv.packagesPaths.length > 0) {
+        outputChannel.appendLine(`📦 REZ_PACKAGES_PATH: ${rezEnv.packagesPaths.join(', ')}`);
+    }
 
     // Test command to verify extension is working
     const testCommand = vscode.commands.registerCommand('rezLsp.test', () => {
@@ -249,13 +367,18 @@ export function activate(context: vscode.ExtensionContext) {
     // Find the LSP server binary
     const serverPath = findLspServer(context);
 
-    // Get configuration
-    const config = vscode.workspace.getConfiguration('rezLsp');
+    // Read remaining config values
     const traceLevel = config.get<string>('trace.server', 'off');
+    const extraPackagePaths = config.get<string[]>('packagePaths', []);
 
     outputChannel.appendLine(`🚀 Starting Rez LSP Server: ${serverPath}`);
     outputChannel.appendLine(`📊 Trace level: ${traceLevel}`);
     outputChannel.appendLine(`📁 Extension path: ${context.extensionPath}`);
+
+    // Build environment for LSP server (merges rez detection + config)
+    const lspEnv = buildServerEnv(rezEnv, traceLevel, extraPackagePaths);
+    const lspEnvDebug = buildServerEnv(rezEnv, 'verbose', extraPackagePaths);
+    lspEnvDebug.RUST_BACKTRACE = 'full';
 
     // Test server accessibility first
     const isAccessible = testServerAccessibility(serverPath);
@@ -269,24 +392,12 @@ export function activate(context: vscode.ExtensionContext) {
         run: {
             command: serverPath,
             transport: TransportKind.stdio,
-            options: {
-                env: {
-                    ...process.env,
-                    RUST_LOG: traceLevel === 'verbose' ? 'debug' : 'info',
-                    RUST_BACKTRACE: '1'
-                }
-            }
+            options: { env: lspEnv }
         },
         debug: {
             command: serverPath,
             transport: TransportKind.stdio,
-            options: {
-                env: {
-                    ...process.env,
-                    RUST_LOG: 'debug',
-                    RUST_BACKTRACE: 'full'
-                }
-            }
+            options: { env: lspEnvDebug }
         }
     };
 

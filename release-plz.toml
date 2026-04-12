@@ -1,14 +1,10 @@
 [workspace]
-# Enable automatic changelog generation
-changelog_update = true
-# Disable GitHub releases for all packages by default (only main package will have releases)
+# Workspace defaults — single-package repo so all settings are in [[package]]
+changelog_update = false
 git_release_enable = false
-# Enable automatic tag creation for all packages
-git_tag_enable = true
-# Only process the main rez-lsp-server package for releases by default
+git_tag_enable = false
 release = false
 
-# Changelog configuration
 [changelog]
 header = """
 # Changelog
@@ -20,14 +16,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 """
 
-# Package-specific configuration - only for the main vx CLI
 [[package]]
 name = "rez-lsp-server"
-# Main CLI package is in the root directory (no path needed)
+# Enable changelog generation for this package
 changelog_update = true
-# Enable GitHub releases only for the main package
+# Create a GitHub release when a tag is pushed
 git_release_enable = true
-# Enable processing for the main package
+# Let release-plz create the git tag automatically after PR merge
+git_tag_enable = true
+# Enable release processing (crates.io publish + tag)
 release = true
-# Standard tag format for main CLI (triggers tag-release-assets.yml workflow)
+# Tag format: v0.1.2 — triggers vscode-extension.yml to build and attach .vsix
 git_tag_name = "v{{version}}"

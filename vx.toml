@@ -1,0 +1,5 @@
+# vx.toml — tool version pinning for rez-lsp-server
+# https://github.com/loonghao/vx
+
+[tools]
+node = "22"

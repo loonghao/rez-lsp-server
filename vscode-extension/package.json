@@ -103,6 +103,16 @@
                     "type": "boolean",
                     "default": true,
                     "description": "Run diagnostics when saving files"
+                },
+                "rezLsp.rezExecutable": {
+                    "type": "string",
+                    "default": "",
+                    "description": "Path to the rez executable (auto-detected from PATH if not set)"
+                },
+                "rezLsp.rezNextExecutable": {
+                    "type": "string",
+                    "default": "",
+                    "description": "Path to the rez-next executable for enhanced completions (auto-detected from PATH if not set)"
                 }
             }
         },
