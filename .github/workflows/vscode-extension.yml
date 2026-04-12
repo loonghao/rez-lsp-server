@@ -1,5 +1,8 @@
 name: VSCode Extension
 
+# CI workflow for pull requests and development pushes.
+# For release builds (triggered by v* tags via release-plz), see release.yml.
+
 on:
   push:
     branches: [main]
@@ -23,7 +26,7 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  # ── Lint & unit-test the TypeScript extension ────────────────────────────
+  # ── Lint & build check the TypeScript extension ───────────────────────────
   lint_and_test:
     name: Lint and Test (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
@@ -35,9 +38,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Use vx to manage Node.js version from vx.toml
+      # vx manages Node.js version from vx.toml (node = "22")
       - name: Setup vx
-        uses: loonghao/vx-action@v1
+        uses: loonghao/vx@main
         with:
           tools: node
 
@@ -53,239 +56,26 @@ jobs:
         working-directory: vscode-extension
         run: npm run vite:build
 
-      - name: Validate package.json (vsce dry-run)
+      - name: Validate package manifest
         working-directory: vscode-extension
         shell: bash
         run: |
           npx --yes @vscode/vsce package --out /tmp/test-validate.vsix --no-dependencies
-          echo "Validation OK"
+          echo "Package validation OK"
 
-  # ── Build Rust LSP server binaries for each target ───────────────────────
-  build_server:
-    name: Build server (${{ matrix.vsix_target }})
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
-            vsix_target: linux-x64
-            binary: rez-lsp-server
-          - os: ubuntu-latest
-            target: aarch64-unknown-linux-gnu
-            vsix_target: linux-arm64
-            binary: rez-lsp-server
-            cross: true
-          - os: windows-latest
-            target: x86_64-pc-windows-msvc
-            vsix_target: win32-x64
-            binary: rez-lsp-server.exe
-          - os: macos-latest
-            target: x86_64-apple-darwin
-            vsix_target: darwin-x64
-            binary: rez-lsp-server
-          - os: macos-latest
-            target: aarch64-apple-darwin
-            vsix_target: darwin-arm64
-            binary: rez-lsp-server
+  # ── Quick Rust build check (linux only, no cross-compile) ────────────────
+  build_server_check:
+    name: Build server (linux-x64)
+    runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.target }}
 
-      - name: Install cross
-        if: matrix.cross
-        run: cargo install cross --git https://github.com/cross-rs/cross
-
-      - name: Cache cargo
+      - name: Cache
         uses: Swatinem/rust-cache@v2
-        with:
-          shared-key: ${{ matrix.target }}
 
-      - name: Build (native)
-        if: '!matrix.cross'
-        run: cargo build --release --target ${{ matrix.target }}
-
-      - name: Build (cross)
-        if: matrix.cross
-        run: cross build --release --target ${{ matrix.target }}
-
-      - name: Upload binary
-        uses: actions/upload-artifact@v4
-        with:
-          name: server-${{ matrix.vsix_target }}
-          path: target/${{ matrix.target }}/release/${{ matrix.binary }}
-          retention-days: 1
-
-  # ── Package per-platform .vsix ────────────────────────────────────────────
-  package_vsix:
-    name: Package .vsix (${{ matrix.vsix_target }})
-    runs-on: ubuntu-latest
-    needs: [lint_and_test, build_server]
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - vsix_target: linux-x64
-            binary: rez-lsp-server
-          - vsix_target: linux-arm64
-            binary: rez-lsp-server
-          - vsix_target: win32-x64
-            binary: rez-lsp-server.exe
-          - vsix_target: darwin-x64
-            binary: rez-lsp-server
-          - vsix_target: darwin-arm64
-            binary: rez-lsp-server
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup vx
-        uses: loonghao/vx-action@v1
-        with:
-          tools: node
-
-      - name: Install extension dependencies
-        working-directory: vscode-extension
-        run: npm install
-
-      - name: Build TypeScript
-        working-directory: vscode-extension
-        run: npm run vite:build
-
-      - name: Download server binary
-        uses: actions/download-artifact@v4
-        with:
-          name: server-${{ matrix.vsix_target }}
-          path: vscode-extension/server/
-
-      - name: Make server executable
-        if: "!startsWith(matrix.vsix_target, 'win32')"
-        run: chmod +x vscode-extension/server/${{ matrix.binary }}
-
-      - name: Get version
-        id: ver
-        working-directory: vscode-extension
-        run: |
-          VER=$(node -p "require('./package.json').version")
-          echo "version=$VER" >> $GITHUB_OUTPUT
-
-      - name: Package .vsix
-        working-directory: vscode-extension
-        run: |
-          VSIX="rez-lsp-extension-${{ steps.ver.outputs.version }}-${{ matrix.vsix_target }}.vsix"
-          npx --yes @vscode/vsce package \
-            --target ${{ matrix.vsix_target }} \
-            --out "$VSIX" \
-            --no-dependencies
-          echo "VSIX=$VSIX" >> $GITHUB_ENV
-          echo "Packaged: $VSIX ($(du -sh $VSIX | cut -f1))"
-
-      - name: Upload .vsix
-        uses: actions/upload-artifact@v4
-        with:
-          name: vsix-${{ matrix.vsix_target }}
-          path: vscode-extension/rez-lsp-extension-*.vsix
-          retention-days: 30
-
-  # ── Build summary ──────────────────────────────────────────────────────────
-  summary:
-    name: Summary
-    runs-on: ubuntu-latest
-    needs: package_vsix
-    if: always()
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          pattern: vsix-*
-          path: vsix/
-          merge-multiple: true
-
-      - name: Report
-        run: |
-          echo "## VSCode Extension Packages" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Platform | File | Size |" >> $GITHUB_STEP_SUMMARY
-          echo "|----------|------|------|" >> $GITHUB_STEP_SUMMARY
-          find vsix/ -name "*.vsix" | sort | while read f; do
-            SIZE=$(du -sh "$f" | cut -f1)
-            NAME=$(basename "$f")
-            PLAT="${NAME#*-extension-}"  # strip prefix
-            PLAT="${PLAT%.vsix}"         # strip suffix
-            echo "| $PLAT | $NAME | $SIZE |" >> $GITHUB_STEP_SUMMARY
-          done
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo '```bash' >> $GITHUB_STEP_SUMMARY
-          echo 'code --install-extension rez-lsp-extension-<version>-<platform>.vsix' >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-
-  # ── Attach .vsix to GitHub Release (triggered by release-plz tag) ─────────
-  attach_to_release:
-    name: Attach to Release
-    runs-on: ubuntu-latest
-    needs: package_vsix
-    if: startsWith(github.ref, 'refs/tags/v')
-    permissions:
-      contents: write
-
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          pattern: vsix-*
-          path: vsix/
-          merge-multiple: true
-
-      - name: Upload .vsix to GitHub Release
-        run: |
-          TAG="${GITHUB_REF#refs/tags/}"
-          echo "Uploading .vsix files to release $TAG"
-          find vsix/ -name "*.vsix" | sort | while read f; do
-            echo "Uploading $f..."
-            gh release upload "$TAG" "$f" --clobber
-          done
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  # ── Publish to Marketplace on main push ───────────────────────────────────
-  publish:
-    name: Publish to Marketplace
-    runs-on: ubuntu-latest
-    needs: package_vsix
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    environment: vscode-marketplace
-
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          pattern: vsix-*
-          path: vsix/
-          merge-multiple: true
-
-      - name: List packages
-        run: find vsix/ -name "*.vsix" | sort
-
-      - name: Setup vx
-        uses: loonghao/vx-action@v1
-        with:
-          tools: node
-
-      - name: Publish to Open VSX
-        continue-on-error: true
-        run: |
-          for vsix in vsix/*.vsix; do
-            echo "Open VSX: $vsix"
-            npx --yes ovsx publish "$vsix" -p ${{ secrets.OPEN_VSX_TOKEN }} || true
-          done
-
-      - name: Publish to VS Marketplace
-        continue-on-error: true
-        run: |
-          for vsix in vsix/*.vsix; do
-            echo "VS Marketplace: $vsix"
-            npx --yes @vscode/vsce publish --packagePath "$vsix" -p ${{ secrets.VSCODE_MARKETPLACE_TOKEN }} || true
-          done
+      - name: Build
+        run: cargo build --release
