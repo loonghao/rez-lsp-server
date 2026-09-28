@@ -175,7 +175,7 @@ impl CallTreeNode {
     /// Find the most expensive child operations.
     pub fn most_expensive_children(&self, limit: usize) -> Vec<&CallTreeNode> {
         let mut children: Vec<&CallTreeNode> = self.children.iter().collect();
-        children.sort_by(|a, b| b.duration_ms.cmp(&a.duration_ms));
+        children.sort_by_key(|a| std::cmp::Reverse(a.duration_ms));
         children.truncate(limit);
         children
     }
