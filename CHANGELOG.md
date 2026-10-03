@@ -57,6 +57,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - fix esbuild vulnerability by upgrading Vite to 6.3.5
 ## [Unreleased]
 
+## [0.1.4](https://github.com/loonghao/rez-lsp-server/compare/v0.1.3...v0.1.4) - 2026-10-03
+
+### Fixed
+
+- clippy::unnecessary_sort_by fails CI on rust 1.98
+
+### Other
+
+- release v0.1.4
+- commit vx.lock and add a guard for lock drift
+
 ## [0.1.4](https://github.com/loonghao/rez-lsp-server/compare/v0.1.3...v0.1.4) - 2026-09-28
 
 ### Fixed
